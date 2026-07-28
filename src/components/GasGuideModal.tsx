@@ -310,8 +310,8 @@ function executeUpdateSK(sheet, payload) {
 }
 
 /**
- * 3. FUNGSI AUTOMATIC CRON JOB (Jalankan Harian)
- * Pengecekan otomatis kolom 'Tanggal Kadaluarsa'. Jika persis 7 hari dari hari ini,
+ * 3. FUNGSI AUTOMATIC CRON JOB (Jalankan Harian / Sesuai Pemicu Triggers)
+ * Pengecekan otomatis kolom 'Tanggal Kadaluarsa'. Jika sisa hari <= 7 hari (termasuk hari ini / H-0),
  * kirim notifikasi Email + WA, lalu update 'Status Notifikasi' menjadi "Terkirim".
  */
 function checkAndSendNotifications() {
@@ -323,34 +323,41 @@ function checkAndSendNotifications() {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   
-  // Target = 7 hari dari hari ini
-  const targetDate = new Date(today);
-  targetDate.setDate(targetDate.getDate() + 7);
-  
   let sentCount = 0;
   
   for (let i = 1; i < data.length; i++) {
     const row = data[i];
-    const noSK = String(row[0]);
+    const noSK = String(row[0]).trim();
     const tanggalBuat = formatDate(row[1]);
-    const durasiBerlaku = String(row[2]);
+    const durasiBerlaku = String(row[2]).trim();
     const rawKadaluarsa = row[3];
-    const emailTujuan = String(row[4]);
-    const noWATujuan = String(row[5]);
-    const statusNotifikasi = String(row[6]);
+    const emailTujuan = String(row[4]).trim();
+    const noWATujuan = String(row[5]).trim();
+    const statusNotifikasi = String(row[6] || "Belum Terkirim").trim();
     
     if (!rawKadaluarsa || !noSK) continue;
     
-    const expiryDate = new Date(rawKadaluarsa);
+    let expiryDate;
+    if (rawKadaluarsa instanceof Date) {
+      expiryDate = new Date(rawKadaluarsa);
+    } else {
+      const strDate = String(rawKadaluarsa).trim().split("T")[0];
+      const parts = strDate.split("-");
+      if (parts.length === 3) {
+        expiryDate = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+      } else {
+        expiryDate = new Date(rawKadaluarsa);
+      }
+    }
     expiryDate.setHours(0, 0, 0, 0);
     
     // Hitung selisih hari
     const diffTime = expiryDate.getTime() - today.getTime();
     const diffDays = Math.round(diffTime / (1000 * 3600 * 24));
     
-    // Jika persis 7 hari lagi (atau <= 7 hari dan Belum Terkirim)
-    if (diffDays === 7 && statusNotifikasi !== "Terkirim") {
-      Logger.log("Mengirim notifikasi untuk SK: " + noSK);
+    // Kirim jika sisa hari <= 7 (misal H-7, H-3, H-0/Hari ini) dan Status belum "Terkirim"
+    if (diffDays <= 7 && statusNotifikasi !== "Terkirim") {
+      Logger.log("Mengirim notifikasi otomatis untuk SK: " + noSK + " (Sisa Hari: " + diffDays + ")");
       
       const tglKadaluarsaFormatted = formatDate(expiryDate);
       

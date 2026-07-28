@@ -9,6 +9,7 @@ import { GasGuideModal } from './components/GasGuideModal';
 import { CodeExportModal } from './components/CodeExportModal';
 import { ApiSettingsModal } from './components/ApiSettingsModal';
 import { NotificationTesterModal } from './components/NotificationTesterModal';
+import { EditSKModal } from './components/EditSKModal';
 import { Database, AlertCircle, Globe } from 'lucide-react';
 
 export default function App() {
@@ -25,6 +26,10 @@ export default function App() {
   const [isCodeExportOpen, setIsCodeExportOpen] = useState<boolean>(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
   const [isTesterOpen, setIsTesterOpen] = useState<boolean>(false);
+  
+  // Edit SK Modal state
+  const [editingRecord, setEditingRecord] = useState<SKRecord | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState<boolean>(false);
 
   // Load records and URL on mount
   useEffect(() => {
@@ -53,9 +58,14 @@ export default function App() {
     await loadRecords();
   };
 
-  const handleDeleteSK = (id: string) => {
-    const updated = GASService.deleteSKRecord(id);
-    setRecords(updated);
+  const handleDeleteSK = async (id: string, noSK?: string) => {
+    const res = await GASService.deleteSKRecord(id, noSK);
+    setRecords(res.records);
+  };
+
+  const handleEditSK = async (updatedSK: SKRecord) => {
+    const res = await GASService.updateSKRecord(updatedSK);
+    setRecords(res.records);
   };
 
   const handleUpdateNotificationStatus = (id: string, status: 'Belum Terkirim' | 'Terkirim') => {
@@ -151,6 +161,10 @@ export default function App() {
           activeFilter={activeFilter}
           onSelectFilter={setActiveFilter}
           onRefresh={loadRecords}
+          onEditRecord={(record) => {
+            setEditingRecord(record);
+            setIsEditModalOpen(true);
+          }}
           onDeleteRecord={handleDeleteSK}
           onTriggerManualNotification={() => setIsTesterOpen(true)}
           isLoading={isLoading}
@@ -201,6 +215,16 @@ export default function App() {
         onClose={() => setIsTesterOpen(false)}
         records={records}
         onUpdateStatus={handleUpdateNotificationStatus}
+      />
+
+      <EditSKModal
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setEditingRecord(null);
+        }}
+        record={editingRecord}
+        onSave={handleEditSK}
       />
     </div>
   );

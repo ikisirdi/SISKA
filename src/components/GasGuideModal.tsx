@@ -80,7 +80,49 @@ function doPost(e) {
 
     const action = contents.action || "createSK";
 
-    // Opsi A: Trigger langsung pengiriman notifikasi Email & WA untuk SK spesifik
+    // 1. ACTION: DELETE SK
+    if (action === "deleteSK") {
+      const noSK = contents.noSK || "";
+      const data = sheet.getDataRange().getValues();
+      let deleted = false;
+      for (let i = 1; i < data.length; i++) {
+        if (String(data[i][0]).trim() === String(noSK).trim()) {
+          sheet.deleteRow(i + 1);
+          deleted = true;
+          break;
+        }
+      }
+      return responseJSON({
+        status: deleted ? "success" : "not_found",
+        message: deleted ? "SK " + noSK + " berhasil dihapus dari Google Sheets!" : "SK " + noSK + " tidak ditemukan."
+      });
+    }
+
+    // 2. ACTION: UPDATE SK
+    if (action === "updateSK") {
+      const noSK = contents.noSK || "";
+      const data = sheet.getDataRange().getValues();
+      let updated = false;
+      for (let i = 1; i < data.length; i++) {
+        if (String(data[i][0]).trim() === String(noSK).trim()) {
+          sheet.getRange(i + 1, 1).setValue(contents.noSK || "");
+          sheet.getRange(i + 1, 2).setValue(contents.tanggalBuat || "");
+          sheet.getRange(i + 1, 3).setValue(contents.durasiBerlaku || "");
+          sheet.getRange(i + 1, 4).setValue(contents.tanggalKadaluarsa || "");
+          sheet.getRange(i + 1, 5).setValue(contents.emailTujuan || "");
+          sheet.getRange(i + 1, 6).setValue(contents.noWATujuan || "");
+          sheet.getRange(i + 1, 7).setValue(contents.statusNotifikasi || "Belum Terkirim");
+          updated = true;
+          break;
+        }
+      }
+      return responseJSON({
+        status: updated ? "success" : "not_found",
+        message: updated ? "SK " + noSK + " berhasil diperbarui di Google Sheets!" : "SK " + noSK + " tidak ditemukan."
+      });
+    }
+
+    // 3. ACTION: TRIGGER NOTIFIKASI
     if (action === "triggerNotification" || action === "sendNotification") {
       const email = contents.emailTujuan || "";
       const noSK = contents.noSK || "";

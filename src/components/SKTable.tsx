@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
 import { SKRecord, StatusFilter } from '../types';
 import { getSKStatus, formatIndonesianDate } from '../utils/dateUtils';
-import { Search, Filter, RefreshCw, Trash2, Mail, Phone, Send, Copy, Check, AlertCircle, FileText, ExternalLink } from 'lucide-react';
+import { Search, Filter, RefreshCw, Trash2, Edit3, Mail, Phone, Send, Copy, Check, AlertCircle, FileText, ExternalLink } from 'lucide-react';
 
 interface SKTableProps {
   records: SKRecord[];
   activeFilter: StatusFilter;
   onSelectFilter: (filter: StatusFilter) => void;
   onRefresh: () => void;
-  onDeleteRecord: (id: string) => void;
+  onEditRecord: (record: SKRecord) => void;
+  onDeleteRecord: (id: string, noSK?: string) => void;
   onTriggerManualNotification: (record: SKRecord) => void;
   isLoading: boolean;
 }
@@ -18,6 +19,7 @@ export const SKTable: React.FC<SKTableProps> = ({
   activeFilter,
   onSelectFilter,
   onRefresh,
+  onEditRecord,
   onDeleteRecord,
   onTriggerManualNotification,
   isLoading
@@ -234,11 +236,21 @@ export const SKTable: React.FC<SKTableProps> = ({
                           <Send className="w-3.5 h-3.5" />
                         </button>
 
+                        {/* Edit Record */}
+                        <button
+                          onClick={() => onEditRecord(r)}
+                          id={`btn-edit-${r.id}`}
+                          className="p-1.5 rounded-lg bg-amber-50 dark:bg-amber-950/60 hover:bg-amber-100 dark:hover:bg-amber-900/60 text-amber-600 dark:text-amber-300 border border-amber-200 dark:border-amber-800 transition-all cursor-pointer"
+                          title="Edit Data SK"
+                        >
+                          <Edit3 className="w-3.5 h-3.5" />
+                        </button>
+
                         {/* Delete Record */}
                         <button
                           onClick={() => {
                             if (confirm(`Hapus SK ${r.noSK}?`)) {
-                              onDeleteRecord(r.id || '');
+                              onDeleteRecord(r.id || '', r.noSK);
                             }
                           }}
                           id={`btn-delete-${r.id}`}

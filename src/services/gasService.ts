@@ -253,12 +253,93 @@ export class GASService {
     }
   }
 
-  // Delete SK locally
-  static deleteSKRecord(id: string): SKRecord[] {
+  // Update existing SK record (locally and send POST to GAS if set)
+  static async updateSKRecord(updatedSK: SKRecord): Promise<{ success: boolean; records: SKRecord[]; message: string }> {
     const current = this.getLocalRecords();
-    const updated = current.filter(item => item.id !== id);
+    const updatedList = current.map(item => item.id === updatedSK.id || item.noSK === updatedSK.noSK ? { ...item, ...updatedSK, updatedAt: new Date().toISOString() } : item);
+    this.saveLocalRecords(updatedList);
+
+    const gasUrl = this.getWebAppUrl();
+    if (!gasUrl) {
+      return {
+        success: true,
+        records: updatedList,
+        message: 'Data SK berhasil diperbarui di penyimpanan lokal.'
+      };
+    }
+
+    try {
+      const payload = {
+        action: 'updateSK',
+        id: updatedSK.id,
+        noSK: updatedSK.noSK,
+        tanggalBuat: updatedSK.tanggalBuat,
+        durasiBerlaku: updatedSK.durasiBerlaku,
+        tanggalKadaluarsa: updatedSK.tanggalKadaluarsa,
+        emailTujuan: updatedSK.emailTujuan,
+        noWATujuan: updatedSK.noWATujuan,
+        statusNotifikasi: updatedSK.statusNotifikasi || 'Belum Terkirim'
+      };
+
+      await fetch(gasUrl, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: {
+          'Content-Type': 'text/plain;charset=utf-8'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      return {
+        success: true,
+        records: updatedList,
+        message: 'Data SK berhasil diperbarui di Google Sheets & lokal.'
+      };
+    } catch (err: any) {
+      console.error('Error updating SK in GAS:', err);
+      return {
+        success: true,
+        records: updatedList,
+        message: 'Data SK diperbarui di lokal, tetapi gagal terhubung ke Google Sheets.'
+      };
+    }
+  }
+
+  // Delete SK locally and sync deletion to GAS Web App if set
+  static async deleteSKRecord(id: string, noSK?: string): Promise<{ records: SKRecord[]; message: string }> {
+    const current = this.getLocalRecords();
+    const targetRecord = current.find(item => item.id === id || (noSK && item.noSK === noSK));
+    const targetNoSK = noSK || targetRecord?.noSK || '';
+
+    const updated = current.filter(item => item.id !== id && (!noSK || item.noSK !== noSK));
     this.saveLocalRecords(updated);
-    return updated;
+
+    const gasUrl = this.getWebAppUrl();
+    if (gasUrl && targetNoSK) {
+      try {
+        const payload = {
+          action: 'deleteSK',
+          id: id,
+          noSK: targetNoSK
+        };
+
+        await fetch(gasUrl, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: {
+            'Content-Type': 'text/plain;charset=utf-8'
+          },
+          body: JSON.stringify(payload)
+        });
+      } catch (err) {
+        console.error('Error syncing deletion to GAS:', err);
+      }
+    }
+
+    return {
+      records: updated,
+      message: targetNoSK ? `SK ${targetNoSK} berhasil dihapus.` : 'SK berhasil dihapus.'
+    };
   }
 
   // Compute stats counters

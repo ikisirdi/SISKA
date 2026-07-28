@@ -49,20 +49,24 @@ const INITIAL_MOCK_DATA: SKRecord[] = [
   }
 ];
 
+// Default fallback values if localStorage is not set on a new device
+const DEFAULT_GAS_URL = (import.meta as any).env?.VITE_GAS_WEB_APP_URL || '';
+const DEFAULT_FONNTE_TOKEN = (import.meta as any).env?.VITE_FONNTE_TOKEN || '';
+
 export class GASService {
-  // Get stored Web App URL (LocalStorage takes priority, falls back to Vercel/Vite ENV variable)
+  // Get stored Web App URL (LocalStorage takes priority, falls back to Default/ENV)
   static getWebAppUrl(): string {
     const local = localStorage.getItem(GAS_URL_KEY);
     if (local && local.trim() !== '') {
       return local.trim();
     }
-    const envUrl = (import.meta as any).env?.VITE_GAS_WEB_APP_URL || '';
-    return typeof envUrl === 'string' ? envUrl.trim() : '';
+    return typeof DEFAULT_GAS_URL === 'string' ? DEFAULT_GAS_URL.trim() : '';
   }
 
   // Save Web App URL
   static setWebAppUrl(url: string): void {
-    localStorage.setItem(GAS_URL_KEY, url.trim());
+    const trimmed = url.trim();
+    localStorage.setItem(GAS_URL_KEY, trimmed);
   }
 
   // Get stored Fonnte API Token
@@ -71,13 +75,13 @@ export class GASService {
     if (local && local.trim() !== '') {
       return local.trim();
     }
-    const envToken = (import.meta as any).env?.VITE_FONNTE_TOKEN || '';
-    return typeof envToken === 'string' ? envToken.trim() : '';
+    return typeof DEFAULT_FONNTE_TOKEN === 'string' ? DEFAULT_FONNTE_TOKEN.trim() : '';
   }
 
   // Save Fonnte API Token
   static setFonnteToken(token: string): void {
-    localStorage.setItem(FONNTE_TOKEN_KEY, token.trim());
+    const trimmed = token.trim();
+    localStorage.setItem(FONNTE_TOKEN_KEY, trimmed);
   }
 
   // Send direct WhatsApp message via Fonnte API (Browser / Client Side)

@@ -77,6 +77,39 @@ function doPost(e) {
     } else {
       contents = e.parameter;
     }
+
+    const action = contents.action || "createSK";
+
+    // Opsi A: Trigger langsung pengiriman notifikasi Email & WA untuk SK spesifik
+    if (action === "triggerNotification" || action === "sendNotification") {
+      const email = contents.emailTujuan || "";
+      const noSK = contents.noSK || "";
+      const tglBuat = contents.tanggalBuat || "";
+      const durasi = contents.durasiBerlaku || "";
+      const tglKadaluarsa = contents.tanggalKadaluarsa || "";
+      const noWA = contents.noWATujuan || "";
+
+      if (email) {
+        sendEmailNotification(email, noSK, tglBuat, durasi, tglKadaluarsa);
+      }
+      if (noWA) {
+        sendWhatsAppNotification(noWA, noSK, tglBuat, durasi, tglKadaluarsa);
+      }
+
+      // Update status notifikasi di Google Sheets menjadi "Terkirim"
+      const data = sheet.getDataRange().getValues();
+      for (let i = 1; i < data.length; i++) {
+        if (String(data[i][0]) === String(noSK)) {
+          sheet.getRange(i + 1, 7).setValue("Terkirim");
+          break;
+        }
+      }
+
+      return responseJSON({
+        status: "success",
+        message: "Notifikasi Email & WA untuk SK " + noSK + " berhasil diproses!"
+      });
+    }
     
     const noSK = contents.noSK || "";
     const tanggalBuat = contents.tanggalBuat || "";

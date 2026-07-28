@@ -206,6 +206,53 @@ export class GASService {
     return updated;
   }
 
+  // Trigger real notification request to Google Apps Script Web App (MailApp.sendEmail + WA Gateway)
+  static async triggerRemoteNotification(record: SKRecord): Promise<{ success: boolean; message: string }> {
+    const gasUrl = this.getWebAppUrl();
+    
+    // Always update status locally
+    this.updateNotificationStatus(record.id || '', 'Terkirim');
+
+    if (!gasUrl) {
+      return {
+        success: true,
+        message: 'Status notifikasi berhasil diperbarui menjadi "Terkirim" di data lokal. (Masukkan URL Web App untuk kirim email otomatis via Google Server)'
+      };
+    }
+
+    try {
+      const payload = {
+        action: 'triggerNotification',
+        noSK: record.noSK,
+        tanggalBuat: record.tanggalBuat,
+        durasiBerlaku: record.durasiBerlaku,
+        tanggalKadaluarsa: record.tanggalKadaluarsa,
+        emailTujuan: record.emailTujuan,
+        noWATujuan: record.noWATujuan
+      };
+
+      await fetch(gasUrl, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: {
+          'Content-Type': 'text/plain;charset=utf-8'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      return {
+        success: true,
+        message: `Sinyal pengiriman notifikasi Email (${record.emailTujuan}) & WA (${record.noWATujuan}) dikirim ke Google Apps Script Web App.`
+      };
+    } catch (err: any) {
+      console.error('Error triggering GAS notification:', err);
+      return {
+        success: false,
+        message: `Gagal memanggil Google Apps Script API: ${err.message}`
+      };
+    }
+  }
+
   // Delete SK locally
   static deleteSKRecord(id: string): SKRecord[] {
     const current = this.getLocalRecords();

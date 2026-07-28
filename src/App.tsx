@@ -9,7 +9,7 @@ import { GasGuideModal } from './components/GasGuideModal';
 import { CodeExportModal } from './components/CodeExportModal';
 import { ApiSettingsModal } from './components/ApiSettingsModal';
 import { NotificationTesterModal } from './components/NotificationTesterModal';
-import { Database, AlertCircle, FileText, CheckCircle2, ShieldAlert } from 'lucide-react';
+import { Database, AlertCircle, Globe } from 'lucide-react';
 
 export default function App() {
   const [records, setRecords] = useState<SKRecord[]>([]);
@@ -47,9 +47,8 @@ export default function App() {
 
   const handleCreateSK = async (newSK: Omit<SKRecord, 'id' | 'statusNotifikasi'>) => {
     setIsSubmitting(true);
-    const res = await GASService.createSKRecord(newSK);
+    await GASService.createSKRecord(newSK);
     setIsSubmitting(false);
-
     // Refresh list
     await loadRecords();
   };
@@ -74,7 +73,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-blue-500 selection:text-white">
-      {/* Top Navbar Header */}
+      {/* Top High Density Navbar Header */}
       <Navbar
         webAppUrl={webAppUrl}
         source={source}
@@ -87,10 +86,10 @@ export default function App() {
       />
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
         {/* Connection Notice / Banner */}
         {errorMessage && (
-          <div className="mb-6 p-4 rounded-xl bg-amber-950/60 border border-amber-800/80 text-amber-200 text-xs flex items-center justify-between gap-3 shadow-md">
+          <div className="p-4 rounded-xl bg-amber-950/60 border border-amber-800/80 text-amber-200 text-xs flex items-center justify-between gap-3 shadow-md">
             <div className="flex items-center space-x-2.5">
               <AlertCircle className="w-5 h-5 text-amber-400 shrink-0" />
               <span>{errorMessage}</span>
@@ -105,26 +104,27 @@ export default function App() {
         )}
 
         {!webAppUrl && (
-          <div className="mb-6 p-4 rounded-2xl bg-gradient-to-r from-blue-950/60 via-indigo-950/40 to-slate-900 border border-blue-800/50 text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-lg">
+          <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-md">
             <div className="space-y-1">
-              <div className="flex items-center space-x-2 text-blue-300 font-bold">
+              <div className="flex items-center space-x-2 text-blue-400 font-bold uppercase tracking-wide">
                 <Database className="w-4 h-4 text-blue-400" />
-                <span>Mode Demonstrasi Lokal Terhubung</span>
+                <span>Status Storage: Data Lokal (Vercel Ready)</span>
               </div>
               <p className="text-slate-300">
-                Aplikasi sedang berjalan di mode penyimpanan browser lokal. Untuk menghubungkan secara langsung dengan <b>Google Sheets</b> Anda, buka panduan backend dan masukkan URL Web App Google Apps Script.
+                Aplikasi siap didaftarkan di <b>Vercel.com</b>. Untuk menghubungkan dengan Google Sheets secara permanen, masukkan Web App URL Google Apps Script di Pengaturan API atau di Environment Variable Vercel (<code>VITE_GAS_WEB_APP_URL</code>).
               </p>
             </div>
             <div className="flex items-center space-x-2 shrink-0">
               <button
-                onClick={() => setIsGasGuideOpen(true)}
-                className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold transition-all shadow-md cursor-pointer"
+                onClick={() => setIsCodeExportOpen(true)}
+                className="px-3.5 py-2 rounded bg-blue-600 hover:bg-blue-500 text-white font-bold transition-all shadow-md cursor-pointer flex items-center gap-1.5"
               >
-                Lihat Kode.gs & Panduan
+                <Globe className="w-3.5 h-3.5" />
+                <span>Panduan Vercel</span>
               </button>
               <button
                 onClick={() => setIsSettingsOpen(true)}
-                className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold transition-all cursor-pointer"
+                className="px-3.5 py-2 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold transition-all cursor-pointer"
               >
                 Input Web App URL
               </button>
@@ -152,22 +152,26 @@ export default function App() {
           onSelectFilter={setActiveFilter}
           onRefresh={loadRecords}
           onDeleteRecord={handleDeleteSK}
-          onTriggerManualNotification={(r) => setIsTesterOpen(true)}
+          onTriggerManualNotification={() => setIsTesterOpen(true)}
           isLoading={isLoading}
         />
       </main>
 
-      {/* Footer */}
-      <footer className="bg-slate-950 border-t border-slate-900 py-6 text-center text-xs text-slate-500">
-        <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-          <p>© {new Date().getFullYear()} Dashboard Manajemen SK Serverless. Integrated with Google Apps Script & Google Sheets.</p>
-          <div className="flex items-center space-x-4 text-slate-400">
-            <button onClick={() => setIsGasGuideOpen(true)} className="hover:text-blue-400 transition-colors cursor-pointer">
-              Backend Code.gs
-            </button>
-            <span>•</span>
-            <button onClick={() => setIsCodeExportOpen(true)} className="hover:text-blue-400 transition-colors cursor-pointer">
-              GitHub Pages Export
+      {/* High Density Footer Status Bar */}
+      <footer className="bg-slate-900 border-t border-slate-800 py-3 px-6 text-[10px] font-mono text-slate-400">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
+          <div className="flex items-center space-x-6">
+            <span>DATABASE: {source === 'GAS' ? 'cloud_google_sheets_live' : 'local_browser_cache'}</span>
+            <span className="hidden sm:inline">DEPLOYMENT: VERCEL_READY</span>
+            <span className="hidden md:inline">CRON_JOB: DAILY_00:00_WIB</span>
+          </div>
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-1.5">
+              <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
+              <span className="text-emerald-400 font-bold">SYSTEM_READY</span>
+            </div>
+            <button onClick={() => setIsCodeExportOpen(true)} className="hover:text-blue-400 transition-colors cursor-pointer underline">
+              Panduan Vercel & Export
             </button>
           </div>
         </div>

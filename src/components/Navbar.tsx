@@ -1,5 +1,5 @@
 import React from 'react';
-import { FileText, Code, Settings, Bell, ExternalLink, Database, CheckCircle2, AlertTriangle, Sparkles } from 'lucide-react';
+import { FileText, Code, Settings, Bell, ExternalLink, Database, Globe } from 'lucide-react';
 
 interface NavbarProps {
   webAppUrl: string;
@@ -23,48 +23,51 @@ export const Navbar: React.FC<NavbarProps> = ({
   segeraCount
 }) => {
   return (
-    <header className="sticky top-0 z-30 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 text-white">
+    <header className="sticky top-0 z-30 bg-slate-900 border-b border-slate-700 text-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          {/* Logo & Title */}
+          {/* Logo & High-Density Monospace Title */}
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-violet-500 flex items-center justify-center shadow-lg shadow-blue-500/20 ring-1 ring-white/20">
-              <FileText className="w-5 h-5 text-white" />
+            <div className="w-8 h-8 bg-blue-600 rounded flex items-center justify-center font-bold text-white text-sm shadow-sm">
+              SK
             </div>
             <div>
               <div className="flex items-center space-x-2">
-                <h1 className="font-bold text-lg text-slate-100 leading-tight">Dashboard SK</h1>
-                <span className="px-2 py-0.5 text-[10px] font-semibold tracking-wider uppercase rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30">
-                  Serverless
+                <h1 className="text-base font-bold tracking-tight uppercase leading-none">Dashboard Manajemen SK</h1>
+                <span className="px-1.5 py-0.5 text-[9px] font-mono font-bold uppercase rounded bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                  Vercel Ready
                 </span>
               </div>
-              <p className="text-xs text-slate-400 hidden sm:block">Manajemen Surat Keputusan & Notifikasi Otomatis</p>
+              <p className="text-[10px] text-slate-400 font-mono tracking-wider uppercase mt-1">
+                Serverless Infrastructure // Apps Script v2.4 & Vercel
+              </p>
             </div>
           </div>
 
           {/* Connection Status Badge & Action Buttons */}
           <div className="flex items-center space-x-2 sm:space-x-3">
-            {/* Connection Status */}
+            {/* Connection Status Indicator */}
             <button
               onClick={onOpenSettings}
               id="btn-connection-status"
-              className={`hidden md:flex items-center space-x-2 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all ${
+              className={`hidden md:flex items-center space-x-2 px-3 py-1.5 rounded border text-[11px] font-mono transition-all cursor-pointer ${
                 webAppUrl && source === 'GAS'
-                  ? 'bg-emerald-950/50 border-emerald-700/50 text-emerald-300 hover:bg-emerald-900/50'
-                  : 'bg-amber-950/40 border-amber-700/50 text-amber-300 hover:bg-amber-900/40'
+                  ? 'bg-slate-950 border-emerald-500/60 text-emerald-400'
+                  : 'bg-slate-950 border-amber-500/60 text-amber-400'
               }`}
               title="Klik untuk mengatur URL Google Apps Script Web App"
             >
-              <Database className="w-3.5 h-3.5" />
-              <span>{source === 'GAS' ? 'Google Sheets Sync' : 'Penyimpanan Lokal'}</span>
               <div className={`w-2 h-2 rounded-full ${source === 'GAS' ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
+              <span className="uppercase">
+                {source === 'GAS' ? 'API: GOOGLE_SHEETS_DB_v1' : 'LOCAL_STORAGE_CACHE'}
+              </span>
             </button>
 
             {/* Simulated Notification Cron Tester */}
             <button
               onClick={onOpenTester}
               id="btn-simulasi-cron"
-              className="relative flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-indigo-600/30 hover:bg-indigo-600/50 border border-indigo-500/40 text-indigo-200 text-xs font-semibold transition-all shadow-sm"
+              className="relative flex items-center space-x-1.5 px-3 py-1.5 rounded bg-indigo-950/80 hover:bg-indigo-900 border border-indigo-700/60 text-indigo-200 text-xs font-semibold transition-all cursor-pointer"
               title="Uji coba otomatisasi pengecekan & pengiriman notifikasi (7 Hari)"
             >
               <Bell className="w-3.5 h-3.5 text-indigo-300" />
@@ -76,32 +79,32 @@ export const Navbar: React.FC<NavbarProps> = ({
               )}
             </button>
 
-            {/* Code.gs & GAS Guide Modal Button */}
+            {/* Backend Code.gs Modal Button */}
             <button
               onClick={onOpenGasGuide}
               id="btn-gas-guide"
-              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-md shadow-blue-600/20 transition-all"
+              className="flex items-center space-x-1.5 px-3 py-1.5 rounded bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all cursor-pointer"
             >
               <Code className="w-3.5 h-3.5" />
               <span>Backend Code.gs</span>
             </button>
 
-            {/* Export index.html Modal Button */}
+            {/* Vercel Deploy Guide Button */}
             <button
               onClick={onOpenCodeExport}
               id="btn-export-html"
-              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-medium transition-all"
-              title="Ekspor file index.html lengkap untuk GitHub Pages"
+              className="flex items-center space-x-1.5 px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600 text-xs font-bold transition-all cursor-pointer"
+              title="Panduan Deploy Vercel.com & Code Export"
             >
-              <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
-              <span className="hidden lg:inline">GitHub Pages Code</span>
+              <Globe className="w-3.5 h-3.5 text-blue-400" />
+              <span className="hidden lg:inline">Deploy Vercel</span>
             </button>
 
             {/* Settings Button */}
             <button
               onClick={onOpenSettings}
               id="btn-settings"
-              className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-all"
+              className="p-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-all cursor-pointer"
               title="Pengaturan API Google Apps Script"
             >
               <Settings className="w-4 h-4" />

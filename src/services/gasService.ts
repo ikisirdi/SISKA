@@ -49,9 +49,14 @@ const INITIAL_MOCK_DATA: SKRecord[] = [
 ];
 
 export class GASService {
-  // Get stored Web App URL
+  // Get stored Web App URL (LocalStorage takes priority, falls back to Vercel/Vite ENV variable)
   static getWebAppUrl(): string {
-    return localStorage.getItem(GAS_URL_KEY) || '';
+    const local = localStorage.getItem(GAS_URL_KEY);
+    if (local && local.trim() !== '') {
+      return local.trim();
+    }
+    const envUrl = (import.meta as any).env?.VITE_GAS_WEB_APP_URL || '';
+    return typeof envUrl === 'string' ? envUrl.trim() : '';
   }
 
   // Save Web App URL

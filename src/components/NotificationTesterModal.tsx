@@ -20,10 +20,29 @@ export const NotificationTesterModal: React.FC<NotificationTesterModalProps> = (
   const [selectedRecordId, setSelectedRecordId] = useState<string>(records[0]?.id || '');
   const [sentLog, setSentLog] = useState<string | null>(null);
   const [isSendingGas, setIsSendingGas] = useState<boolean>(false);
+  const [isSendingFonnte, setIsSendingFonnte] = useState<boolean>(false);
 
   if (!isOpen) return null;
 
   const selectedRecord = records.find(r => r.id === selectedRecordId) || records[0];
+
+  // Direct Fonnte WA API Dispatch
+  const handleSendFonnteWA = async () => {
+    if (!selectedRecord) return;
+    setIsSendingFonnte(true);
+
+    const message = `⚠️ *PENGINGAT KADALUARSA SK* ⚠️\n\nNomor SK: *${selectedRecord.noSK}*\nTanggal Buat: ${selectedRecord.tanggalBuat}\nMasa Berlaku: ${selectedRecord.durasiBerlaku}\nTanggal Kadaluarsa: *${selectedRecord.tanggalKadaluarsa}*\nEmail Tujuan: ${selectedRecord.emailTujuan}\n\n_Mohon segera diproses perpanjangannya._\n*Sistem Manajemen SK*`;
+
+    const res = await GASService.sendFonnteWhatsApp(selectedRecord.noWATujuan, message);
+    setIsSendingFonnte(false);
+
+    if (res.success) {
+      onUpdateStatus(selectedRecord.id || '', 'Terkirim');
+      setSentLog(`[FONNTE WA SUCCESS] ${res.message}`);
+    } else {
+      setSentLog(`[FONNTE WA ERROR] ${res.message}`);
+    }
+  };
 
   // 1. Direct WhatsApp Web / App Launch (1-Click Real WA Message)
   const handleSendWhatsAppDirect = () => {
@@ -145,44 +164,65 @@ export const NotificationTesterModal: React.FC<NotificationTesterModalProps> = (
               </div>
 
               {/* 3 Quick Action Cards for Sending */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {/* Option 1: WhatsApp Direct */}
-                <div className="p-3.5 rounded-xl bg-emerald-950/30 border border-emerald-800/60 flex flex-col justify-between space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {/* Option 1: Direct Fonnte WA API */}
+                <div className="p-3.5 rounded-xl bg-emerald-950/50 border border-emerald-700/80 flex flex-col justify-between space-y-3">
                   <div>
-                    <div className="flex items-center space-x-2 text-emerald-400 font-bold mb-1">
-                      <Phone className="w-4 h-4" />
-                      <span>Kirim WhatsApp (1-Click)</span>
+                    <div className="flex items-center space-x-1.5 text-emerald-400 font-bold mb-1">
+                      <Send className="w-4 h-4 text-emerald-400" />
+                      <span>API Fonnte WA</span>
                     </div>
                     <p className="text-[11px] text-slate-300">
-                      Membuka WhatsApp Web / App dengan pesan pengingat yang sudah terformat rapi untuk nomor WA target.
+                      Kirim pesan WA otomatis secara latar belakang via API Fonnte.com.
+                    </p>
+                  </div>
+                  <button
+                    onClick={handleSendFonnteWA}
+                    disabled={isSendingFonnte}
+                    className="w-full py-2 px-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center space-x-1.5 transition-all cursor-pointer shadow"
+                  >
+                    <Send className={`w-3.5 h-3.5 ${isSendingFonnte ? 'animate-spin' : ''}`} />
+                    <span>{isSendingFonnte ? 'Kirim WA...' : 'Kirim WA (Fonnte API)'}</span>
+                  </button>
+                </div>
+
+                {/* Option 2: WhatsApp Web Direct */}
+                <div className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800 flex flex-col justify-between space-y-3">
+                  <div>
+                    <div className="flex items-center space-x-1.5 text-teal-400 font-bold mb-1">
+                      <Phone className="w-4 h-4" />
+                      <span>WhatsApp Web</span>
+                    </div>
+                    <p className="text-[11px] text-slate-300">
+                      Buka aplikasi WhatsApp Web/Desktop dengan teks pesan terisi otomatis.
                     </p>
                   </div>
                   <button
                     onClick={handleSendWhatsAppDirect}
-                    className="w-full py-2 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center space-x-1.5 transition-all cursor-pointer shadow"
+                    className="w-full py-2 px-2.5 rounded-lg bg-teal-700 hover:bg-teal-600 text-white font-bold text-xs flex items-center justify-center space-x-1.5 transition-all cursor-pointer shadow"
                   >
                     <ExternalLink className="w-3.5 h-3.5" />
-                    <span>Buka WhatsApp Web</span>
+                    <span>Buka WA Web</span>
                   </button>
                 </div>
 
-                {/* Option 2: Email Client Direct */}
+                {/* Option 3: Email Client Direct */}
                 <div className="p-3.5 rounded-xl bg-blue-950/30 border border-blue-800/60 flex flex-col justify-between space-y-3">
                   <div>
-                    <div className="flex items-center space-x-2 text-blue-400 font-bold mb-1">
+                    <div className="flex items-center space-x-1.5 text-blue-400 font-bold mb-1">
                       <Mail className="w-4 h-4" />
-                      <span>Kirim Email Client (1-Click)</span>
+                      <span>Email Client</span>
                     </div>
                     <p className="text-[11px] text-slate-300">
-                      Membuka aplikasi Email (Gmail/Outlook) dengan Subject & Body pengingat SK terisi otomatis.
+                      Buka aplikasi Email (Gmail/Outlook) dengan template pesan otomatis.
                     </p>
                   </div>
                   <button
                     onClick={handleSendEmailDirect}
-                    className="w-full py-2 px-3 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center justify-center space-x-1.5 transition-all cursor-pointer shadow"
+                    className="w-full py-2 px-2.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center justify-center space-x-1.5 transition-all cursor-pointer shadow"
                   >
                     <ExternalLink className="w-3.5 h-3.5" />
-                    <span>Buka Client Email</span>
+                    <span>Buka Email</span>
                   </button>
                 </div>
               </div>

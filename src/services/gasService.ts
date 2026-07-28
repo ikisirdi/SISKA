@@ -3,6 +3,7 @@ import { getSKStatus, calculateExpiryDate } from '../utils/dateUtils';
 
 const STORAGE_KEY = 'sk_management_records_v1';
 const GAS_URL_KEY = 'sk_management_gas_url_v1';
+const FONNTE_TOKEN_KEY = 'sk_management_fonnte_token_v1';
 
 // Initial sample mock data if localStorage is empty
 const INITIAL_MOCK_DATA: SKRecord[] = [
@@ -62,6 +63,73 @@ export class GASService {
   // Save Web App URL
   static setWebAppUrl(url: string): void {
     localStorage.setItem(GAS_URL_KEY, url.trim());
+  }
+
+  // Get stored Fonnte API Token
+  static getFonnteToken(): string {
+    const local = localStorage.getItem(FONNTE_TOKEN_KEY);
+    if (local && local.trim() !== '') {
+      return local.trim();
+    }
+    const envToken = (import.meta as any).env?.VITE_FONNTE_TOKEN || '';
+    return typeof envToken === 'string' ? envToken.trim() : '';
+  }
+
+  // Save Fonnte API Token
+  static setFonnteToken(token: string): void {
+    localStorage.setItem(FONNTE_TOKEN_KEY, token.trim());
+  }
+
+  // Send direct WhatsApp message via Fonnte API (Browser / Client Side)
+  static async sendFonnteWhatsApp(noWA: string, message: string, tokenOverride?: string): Promise<{ success: boolean; message: string; data?: any }> {
+    const token = tokenOverride || this.getFonnteToken();
+    if (!token) {
+      return {
+        success: false,
+        message: 'Token API Fonnte belum dimasukkan. Silakan atur token di Pengaturan API.'
+      };
+    }
+
+    let cleanWA = noWA.replace(/[^0-9]/g, '');
+    if (cleanWA.startsWith('0')) {
+      cleanWA = '62' + cleanWA.substring(1);
+    }
+
+    try {
+      const formData = new FormData();
+      formData.append('target', cleanWA);
+      formData.append('message', message);
+      formData.append('countryCode', '62');
+
+      const response = await fetch('https://api.fonnte.com/send', {
+        method: 'POST',
+        headers: {
+          'Authorization': token
+        },
+        body: formData
+      });
+
+      const resData = await response.json();
+      if (resData.status === true || resData.detail === 'success' || response.ok) {
+        return {
+          success: true,
+          message: `WhatsApp berhasil dikirim ke ${cleanWA} via API Fonnte!`,
+          data: resData
+        };
+      } else {
+        return {
+          success: false,
+          message: `Respon Fonnte: ${resData.reason || resData.message || JSON.stringify(resData)}`,
+          data: resData
+        };
+      }
+    } catch (err: any) {
+      console.error('Error sending Fonnte WA:', err);
+      return {
+        success: false,
+        message: `Gagal memanggil API Fonnte: ${err.message}`
+      };
+    }
   }
 
   // Get records from LocalStorage

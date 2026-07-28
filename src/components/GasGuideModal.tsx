@@ -354,8 +354,8 @@ function sendWhatsAppNotification(noWA, noSK, tanggalBuat, durasi, tglKadaluarsa
     cleanWA = '62' + cleanWA.substring(1);
   }
   
-  if (FONNTE_API_TOKEN === "GANTI_DENGAN_TOKEN_FONNTE_ANDA") {
-    Logger.log("[WA SIMULASI] Notifikasi WA siap dikirim ke " + cleanWA + ": " + message);
+  if (FONNTE_API_TOKEN === "GANTI_DENGAN_TOKEN_FONNTE_ANDA" || !FONNTE_API_TOKEN) {
+    Logger.log("[WA SIMULASI] Token Fonnte belum diganti. Pesan WA siap dikirim ke " + cleanWA + ": " + message);
     return;
   }
   
@@ -368,18 +368,18 @@ function sendWhatsAppNotification(noWA, noSK, tanggalBuat, durasi, tglKadaluarsa
     
     const options = {
       method: 'post',
-      contentType: 'application/json',
       headers: {
         'Authorization': FONNTE_API_TOKEN
       },
-      payload: JSON.stringify(payload),
+      payload: payload,
       muteHttpExceptions: true
     };
     
     const response = UrlFetchApp.fetch('https://api.fonnte.com/send', options);
-    Logger.log("Respon Fonnte WA: " + response.getContentText());
+    const resText = response.getContentText();
+    Logger.log("Respon Fonnte WA (" + response.getResponseCode() + "): " + resText);
   } catch (err) {
-    Logger.log("Gagal kirim WA: " + err.toString());
+    Logger.log("Gagal kirim WA via Fonnte: " + err.toString());
   }
 }
 

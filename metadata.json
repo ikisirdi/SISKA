@@ -1,0 +1,6 @@
+{
+  "name": "Dashboard Manajemen SK",
+  "description": "Dashboard Manajemen Surat Keputusan (SK) berbasis serverless dengan integrasi Google Apps Script, Google Sheets, dan notifikasi otomatis WhatsApp & Email.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

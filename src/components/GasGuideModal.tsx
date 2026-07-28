@@ -431,6 +431,8 @@ function sendWhatsAppNotification(noWA, noSK, tanggalBuat, durasi, tglKadaluarsa
   let cleanWA = String(noWA).replace(/[^0-9]/g, '');
   if (cleanWA.startsWith('0')) {
     cleanWA = '62' + cleanWA.substring(1);
+  } else if (cleanWA.startsWith('8')) {
+    cleanWA = '62' + cleanWA;
   }
   
   if (FONNTE_API_TOKEN === "GANTI_DENGAN_TOKEN_FONNTE_ANDA" || !FONNTE_API_TOKEN) {

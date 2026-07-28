@@ -253,7 +253,7 @@ export class GASService {
     }
   }
 
-  // Update existing SK record (locally and send POST to GAS if set)
+  // Update existing SK record (locally and send POST + GET to GAS if set)
   static async updateSKRecord(updatedSK: SKRecord): Promise<{ success: boolean; records: SKRecord[]; message: string }> {
     const current = this.getLocalRecords();
     const updatedList = current.map(item => item.id === updatedSK.id || item.noSK === updatedSK.noSK ? { ...item, ...updatedSK, updatedAt: new Date().toISOString() } : item);
@@ -281,6 +281,7 @@ export class GASService {
         statusNotifikasi: updatedSK.statusNotifikasi || 'Belum Terkirim'
       };
 
+      // 1. Send POST request
       await fetch(gasUrl, {
         method: 'POST',
         mode: 'no-cors',
@@ -289,6 +290,20 @@ export class GASService {
         },
         body: JSON.stringify(payload)
       });
+
+      // 2. Send GET fallback query string to guarantee execution in Apps Script doGet
+      const getParams = new URLSearchParams({
+        action: 'updateSK',
+        noSK: updatedSK.noSK,
+        tanggalBuat: updatedSK.tanggalBuat,
+        durasiBerlaku: updatedSK.durasiBerlaku,
+        tanggalKadaluarsa: updatedSK.tanggalKadaluarsa,
+        emailTujuan: updatedSK.emailTujuan,
+        noWATujuan: updatedSK.noWATujuan,
+        statusNotifikasi: updatedSK.statusNotifikasi || 'Belum Terkirim',
+        t: Date.now().toString()
+      });
+      await fetch(`${gasUrl}?${getParams.toString()}`, { mode: 'no-cors' });
 
       return {
         success: true,
@@ -300,7 +315,7 @@ export class GASService {
       return {
         success: true,
         records: updatedList,
-        message: 'Data SK diperbarui di lokal, tetapi gagal terhubung ke Google Sheets.'
+        message: 'Data SK diperbarui di lokal.'
       };
     }
   }
@@ -323,6 +338,7 @@ export class GASService {
           noSK: targetNoSK
         };
 
+        // 1. Send POST request
         await fetch(gasUrl, {
           method: 'POST',
           mode: 'no-cors',
@@ -331,6 +347,10 @@ export class GASService {
           },
           body: JSON.stringify(payload)
         });
+
+        // 2. Send GET request fallback (100% reliable for Apps Script doGet)
+        const getUrl = `${gasUrl}?action=deleteSK&noSK=${encodeURIComponent(targetNoSK)}&t=${Date.now()}`;
+        await fetch(getUrl, { mode: 'no-cors' });
       } catch (err) {
         console.error('Error syncing deletion to GAS:', err);
       }

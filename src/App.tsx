@@ -61,11 +61,21 @@ export default function App() {
   const handleDeleteSK = async (id: string, noSK?: string) => {
     const res = await GASService.deleteSKRecord(id, noSK);
     setRecords(res.records);
+    if (webAppUrl) {
+      setTimeout(() => {
+        loadRecords();
+      }, 1500);
+    }
   };
 
   const handleEditSK = async (updatedSK: SKRecord) => {
     const res = await GASService.updateSKRecord(updatedSK);
     setRecords(res.records);
+    if (webAppUrl) {
+      setTimeout(() => {
+        loadRecords();
+      }, 1500);
+    }
   };
 
   const handleUpdateNotificationStatus = (id: string, status: 'Belum Terkirim' | 'Terkirim') => {

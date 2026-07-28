@@ -28,6 +28,9 @@ const SENDER_EMAIL_NAME = "Sistem Notifikasi SK Kantor";
  */
 function doGet(e) {
   try {
+    const actionResult = handleGetActions(e);
+    if (actionResult) return actionResult;
+
     const sheet = getOrCreateSheet();
     const data = sheet.getDataRange().getValues();
     
@@ -60,6 +63,58 @@ function doGet(e) {
   } catch (error) {
     return responseJSON({ status: "error", message: error.toString() });
   }
+}
+
+/**
+ * Handle GET parameters for Delete & Update (Direct GET fallback)
+ */
+function handleGetActions(e) {
+  if (!e || !e.parameter) return null;
+  const action = e.parameter.action;
+  const sheet = getOrCreateSheet();
+
+  if (action === "deleteSK") {
+    const noSK = e.parameter.noSK || "";
+    const data = sheet.getDataRange().getValues();
+    let deleted = false;
+    for (let i = 1; i < data.length; i++) {
+      const rowNoSK = String(data[i][0]).trim();
+      if (rowNoSK && (rowNoSK === String(noSK).trim() || rowNoSK.toLowerCase() === String(noSK).toLowerCase().trim())) {
+        sheet.deleteRow(i + 1);
+        deleted = true;
+        break;
+      }
+    }
+    return responseJSON({
+      status: deleted ? "success" : "not_found",
+      message: deleted ? "SK " + noSK + " berhasil dihapus dari Google Sheets!" : "SK " + noSK + " tidak ditemukan."
+    });
+  }
+
+  if (action === "updateSK") {
+    const noSK = e.parameter.noSK || "";
+    const data = sheet.getDataRange().getValues();
+    let updated = false;
+    for (let i = 1; i < data.length; i++) {
+      const rowNoSK = String(data[i][0]).trim();
+      if (rowNoSK && (rowNoSK === String(noSK).trim() || rowNoSK.toLowerCase() === String(noSK).toLowerCase().trim())) {
+        if (e.parameter.tanggalBuat) sheet.getRange(i + 1, 2).setValue(e.parameter.tanggalBuat);
+        if (e.parameter.durasiBerlaku) sheet.getRange(i + 1, 3).setValue(e.parameter.durasiBerlaku);
+        if (e.parameter.tanggalKadaluarsa) sheet.getRange(i + 1, 4).setValue(e.parameter.tanggalKadaluarsa);
+        if (e.parameter.emailTujuan) sheet.getRange(i + 1, 5).setValue(e.parameter.emailTujuan);
+        if (e.parameter.noWATujuan) sheet.getRange(i + 1, 6).setValue(e.parameter.noWATujuan);
+        if (e.parameter.statusNotifikasi) sheet.getRange(i + 1, 7).setValue(e.parameter.statusNotifikasi);
+        updated = true;
+        break;
+      }
+    }
+    return responseJSON({
+      status: updated ? "success" : "not_found",
+      message: updated ? "SK " + noSK + " berhasil diperbarui di Google Sheets!" : "SK " + noSK + " tidak ditemukan."
+    });
+  }
+
+  return null;
 }
 
 /**
@@ -454,6 +509,15 @@ export const GasGuideModal: React.FC<GasGuideModalProps> = ({ isOpen, onClose })
         <div className="p-6 overflow-y-auto flex-1 text-xs space-y-6">
           {activeTab === 'code' && (
             <div className="space-y-4">
+              {/* Important update banner */}
+              <div className="p-3.5 rounded-xl bg-amber-950/60 border border-amber-800/80 text-amber-200 text-[11px] leading-relaxed flex items-start space-x-2.5 shadow">
+                <span className="text-amber-400 font-bold text-sm shrink-0">⚠️</span>
+                <div>
+                  <strong className="font-bold text-amber-300">PENTING (Update Deployment Web App):</strong> Jika Anda pernah mendeploy Web App ini sebelumnya, harapkan <strong>copy ulang seluruh kode Code.gs</strong> di bawah ini, lalu di editor Apps Script klik: 
+                  <span className="font-mono bg-amber-900/50 px-1 py-0.5 rounded ml-1">Deploy &gt; Manage deployments &gt; Edit (Pensil) &gt; Version: "New version" &gt; Deploy</span>. Langkah ini wajib dilakukan agar Google Sheets mengenali perintah <strong>HAPUS SK</strong> dan <strong>EDIT SK</strong>.
+                </div>
+              </div>
+
               <div className="flex items-center justify-between p-3 rounded-xl bg-slate-800/80 border border-slate-700">
                 <div className="flex items-center space-x-2">
                   <ShieldCheck className="w-4 h-4 text-emerald-400" />

@@ -19,13 +19,13 @@ const SHEET_NAME = "DataSK"; // Nama Sheet tab di Google Sheets
 const FONNTE_API_TOKEN = "GANTI_DENGAN_TOKEN_FONNTE_ANDA"; // Token dari fonnte.com (Opsional)
 const SENDER_EMAIL_NAME = "Sistem Notifikasi SK Kantor";
 
-/** Helper: Normalisasi No SK untuk pencocokan 100% presisi (abaikan spasi, huruf kecil/besar, slash) */
+/** Helper: Normalisasi No SK untuk pencocokan 100% presisi (abaikan spasi, huruf kecil/besar, slash, strip karakter khusus) */
 function normalizeSK(str) {
   if (!str) return "";
   return String(str)
     .trim()
     .toLowerCase()
-    .replace(/[\s\/\-\._]/g, "");
+    .replace(/[^a-z0-9]/g, "");
 }
 
 /** Helper Response JSON dengan MIME type */

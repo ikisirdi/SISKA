@@ -120,9 +120,17 @@ export const ExportPrintModal: React.FC<ExportPrintModalProps> = ({
     URL.revokeObjectURL(url);
   };
 
-  // Trigger Print Laporan A4
+  // Trigger Print Laporan Resmi A4 (Modal Content)
   const handlePrint = () => {
     window.print();
+  };
+
+  // Trigger Print Tampilan Aplikasi / Dashboard Screenshot View
+  const handlePrintDashboard = () => {
+    onClose();
+    setTimeout(() => {
+      window.print();
+    }, 300);
   };
 
   const currentDateFormatted = formatIndonesianDate(new Date().toISOString().split('T')[0]);
@@ -132,21 +140,22 @@ export const ExportPrintModal: React.FC<ExportPrintModalProps> = ({
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-5xl shadow-2xl text-slate-900 dark:text-slate-100 overflow-hidden my-auto print:border-0 print:shadow-none print:w-full print:max-w-none print:rounded-none print:bg-white print:text-black">
         
         {/* Modal Header (Hidden on Print) */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 print:hidden">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 print:hidden">
           <div className="flex items-center space-x-3">
             <div className="p-2.5 rounded-xl bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-400">
               <FileText className="w-5 h-5" />
             </div>
             <div>
               <h3 className="font-bold text-base text-slate-900 dark:text-white">Cetak Laporan A4 & Export Word</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Pratinjau dokumen resmi A4 dengan Kop Surat & opsi Cetak Word (.doc)</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Pilih format cetak resmi A4 (Kop Surat) atau screenshot tampilan dashboard aplikasi</p>
             </div>
           </div>
 
-          <div className="flex items-center space-x-2">
+          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
             <button
               onClick={handleExportWord}
-              className="flex items-center space-x-1.5 px-4 py-2 rounded-xl bg-blue-700 hover:bg-blue-600 text-white text-xs font-bold shadow-md shadow-blue-700/20 transition-all cursor-pointer"
+              className="flex items-center space-x-1.5 px-3 py-2 rounded-xl bg-blue-700 hover:bg-blue-600 text-white text-xs font-bold shadow-md shadow-blue-700/20 transition-all cursor-pointer"
+              title="Unduh sebagai file dokumen Microsoft Word"
             >
               <FileText className="w-4 h-4" />
               <span>Cetak Word (.doc)</span>
@@ -154,10 +163,20 @@ export const ExportPrintModal: React.FC<ExportPrintModalProps> = ({
 
             <button
               onClick={handlePrint}
-              className="flex items-center space-x-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-md shadow-emerald-600/20 transition-all cursor-pointer"
+              className="flex items-center space-x-1.5 px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-md shadow-emerald-600/20 transition-all cursor-pointer"
+              title="Cetak Laporan Format Resmi A4 (Dokumen Kop Surat)"
             >
               <Printer className="w-4 h-4" />
-              <span>Cetak / Print PDF A4</span>
+              <span>Cetak PDF Laporan A4</span>
+            </button>
+
+            <button
+              onClick={handlePrintDashboard}
+              className="flex items-center space-x-1.5 px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-md shadow-indigo-600/20 transition-all cursor-pointer"
+              title="Cetak Screenshot / Tampilan Halaman Dashboard Aplikasi"
+            >
+              <Printer className="w-4 h-4" />
+              <span>Cetak Tampilan Aplikasi</span>
             </button>
 
             <button
@@ -172,17 +191,17 @@ export const ExportPrintModal: React.FC<ExportPrintModalProps> = ({
         {/* Print Document Body */}
         <div className="p-6 sm:p-8 space-y-6 max-h-[80vh] overflow-y-auto print:max-h-none print:overflow-visible print:p-0" ref={printRef}>
           
-          {/* Gambar Kop Surat */}
+          {/* Gambar Kop Surat Pengadilan Agama Paniai */}
           <div className="w-full flex flex-col items-center justify-center mb-4 border-b border-slate-300 dark:border-slate-700 pb-3 print:border-black">
             <img
-              src="/kop%20surat.png"
-              alt="Kop Surat Resmi"
+              src="/kop_surat.png"
+              alt="Kop Surat Pengadilan Agama Paniai"
               className="w-full max-h-40 object-contain print:max-h-44 print:w-full print:block"
               onError={(e) => {
                 const target = e.currentTarget;
-                if (!target.dataset.triedUnderscore) {
-                  target.dataset.triedUnderscore = 'true';
-                  target.src = '/kop_surat.png';
+                if (!target.dataset.triedEscaped) {
+                  target.dataset.triedEscaped = 'true';
+                  target.src = '/kop%20surat.png';
                 } else {
                   target.style.display = 'none';
                   const fallbackEl = document.getElementById('kop-fallback-header');
@@ -192,14 +211,23 @@ export const ExportPrintModal: React.FC<ExportPrintModalProps> = ({
             />
             {/* Fallback Kop Surat Header jika gambar tidak dapat dimuat */}
             <div id="kop-fallback-header" className="hidden text-center w-full py-2">
-              <h1 className="text-xl sm:text-2xl font-black uppercase tracking-widest text-slate-900 dark:text-white print:text-black">
-                PEMERINTAH REPUBLIK INDONESIA
+              <h1 className="text-xs sm:text-sm font-bold uppercase tracking-widest text-slate-800 dark:text-slate-200 print:text-black">
+                MAHKAMAH AGUNG REPUBLIK INDONESIA
               </h1>
-              <h2 className="text-sm sm:text-base font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200 print:text-black mt-0.5">
-                KANTOR DINAS KEDINASAN & MANAJEMEN KEPEGAWAIAN
+              <h2 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200 print:text-black mt-0.5">
+                DIREKTORAT JENDERAL BADAN PERADILAN AGAMA
               </h2>
+              <h2 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200 print:text-black mt-0.5">
+                PENGADILAN TINGGI AGAMA JAYAPURA
+              </h2>
+              <h1 className="text-lg sm:text-xl font-black uppercase tracking-wider text-slate-900 dark:text-white print:text-black mt-1">
+                PENGADILAN AGAMA PANIAI
+              </h1>
               <p className="text-xs font-medium text-slate-600 dark:text-slate-400 print:text-slate-700 mt-1">
-                Jalan Utama Perkantoran No. 01 | Telp: (021) 555-0199 | Email: sekretariat@dinas.go.id
+                Kompleks Kantor Bupati Paniai, Paniai Timur, Paniai | Telp. 085244544676
+              </p>
+              <p className="text-xs font-medium text-blue-600 dark:text-blue-400 print:text-black">
+                www.pa-paniai.go.id, pengadilan.agama.paniai@gmail.com
               </p>
               <div className="w-full border-b-4 border-double border-slate-900 dark:border-slate-100 print:border-black mt-2"></div>
             </div>

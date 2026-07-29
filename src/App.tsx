@@ -10,7 +10,15 @@ import { CodeExportModal } from './components/CodeExportModal';
 import { ApiSettingsModal } from './components/ApiSettingsModal';
 import { NotificationTesterModal } from './components/NotificationTesterModal';
 import { EditSKModal } from './components/EditSKModal';
-import { Database, AlertCircle, Globe } from 'lucide-react';
+import { ExportPrintModal } from './components/ExportPrintModal';
+import { Database, AlertCircle, Globe, CheckCircle2, Loader2, X } from 'lucide-react';
+
+interface Toast {
+  id: string;
+  type: 'success' | 'error' | 'info';
+  title: string;
+  message: string;
+}
 
 export default function App() {
   const [records, setRecords] = useState<SKRecord[]>([]);
@@ -21,15 +29,38 @@ export default function App() {
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [activeFilter, setActiveFilter] = useState<StatusFilter>('Semua');
 
+  // Loading animation modal state for CRUD
+  const [processLoading, setProcessLoading] = useState<{ isBusy: boolean; text: string }>({
+    isBusy: false,
+    text: ''
+  });
+
+  // Corner Toast Notifications state
+  const [toasts, setToasts] = useState<Toast[]>([]);
+
   // Modals state
   const [isGasGuideOpen, setIsGasGuideOpen] = useState<boolean>(false);
   const [isCodeExportOpen, setIsCodeExportOpen] = useState<boolean>(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
   const [isTesterOpen, setIsTesterOpen] = useState<boolean>(false);
-  
+  const [isExportModalOpen, setIsExportModalOpen] = useState<boolean>(false);
+
   // Edit SK Modal state
   const [editingRecord, setEditingRecord] = useState<SKRecord | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState<boolean>(false);
+
+  // Helper Toast Notification
+  const showToast = (type: 'success' | 'error' | 'info', title: string, message: string) => {
+    const id = Date.now().toString();
+    setToasts((prev) => [...prev, { id, type, title, message }]);
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== id));
+    }, 4000);
+  };
+
+  const removeToast = (id: string) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  };
 
   // Load records and URL on mount
   useEffect(() => {
@@ -51,49 +82,74 @@ export default function App() {
   };
 
   const handleCreateSK = async (newSK: Omit<SKRecord, 'id' | 'statusNotifikasi'>) => {
+    setProcessLoading({ isBusy: true, text: 'Menyimpan Data SK Baru...' });
     setIsSubmitting(true);
-    await GASService.createSKRecord(newSK);
-    setIsSubmitting(false);
-    // Refresh list
-    await loadRecords();
+    try {
+      await GASService.createSKRecord(newSK);
+      await loadRecords();
+      showToast('success', 'Berhasil Menyimpan', `Data SK (${newSK.noSK}) telah tersimpan.`);
+    } catch (err) {
+      showToast('error', 'Gagal Menyimpan', 'Terjadi kesalahan saat menyimpan data.');
+    } finally {
+      setIsSubmitting(false);
+      setProcessLoading({ isBusy: false, text: '' });
+    }
   };
 
   const handleDeleteSK = async (id: string, noSK?: string) => {
-    const res = await GASService.deleteSKRecord(id, noSK);
-    setRecords(res.records);
-    if (webAppUrl) {
-      setTimeout(() => {
-        loadRecords();
-      }, 1500);
+    setProcessLoading({ isBusy: true, text: 'Menghapus Data SK...' });
+    try {
+      const res = await GASService.deleteSKRecord(id, noSK);
+      setRecords(res.records);
+      showToast('success', 'Berhasil Dihapus', `Data SK (${noSK || ''}) telah dihapus dari sistem.`);
+      if (webAppUrl) {
+        setTimeout(() => {
+          loadRecords();
+        }, 1500);
+      }
+    } catch (err) {
+      showToast('error', 'Gagal Menghapus', 'Terjadi kesalahan saat menghapus data.');
+    } finally {
+      setProcessLoading({ isBusy: false, text: '' });
     }
   };
 
   const handleEditSK = async (updatedSK: SKRecord) => {
-    const res = await GASService.updateSKRecord(updatedSK);
-    setRecords(res.records);
-    if (webAppUrl) {
-      setTimeout(() => {
-        loadRecords();
-      }, 1500);
+    setProcessLoading({ isBusy: true, text: 'Memperbarui Data SK...' });
+    try {
+      const res = await GASService.updateSKRecord(updatedSK);
+      setRecords(res.records);
+      showToast('success', 'Berhasil Diperbarui', `Data SK (${updatedSK.noSK}) telah diperbarui.`);
+      if (webAppUrl) {
+        setTimeout(() => {
+          loadRecords();
+        }, 1500);
+      }
+    } catch (err) {
+      showToast('error', 'Gagal Memperbarui', 'Terjadi kesalahan saat memperbarui data.');
+    } finally {
+      setProcessLoading({ isBusy: false, text: '' });
     }
   };
 
   const handleUpdateNotificationStatus = (id: string, status: 'Belum Terkirim' | 'Terkirim') => {
     const updated = GASService.updateNotificationStatus(id, status);
     setRecords(updated);
+    showToast('info', 'Status Disimulasikan', `Status notifikasi diubah menjadi ${status}.`);
   };
 
   const handleSaveWebAppUrl = (newUrl: string) => {
     GASService.setWebAppUrl(newUrl);
     setWebAppUrl(newUrl);
     loadRecords();
+    showToast('success', 'Pengaturan Disimpan', 'URL Web App Google Apps Script telah diperbarui.');
   };
 
   const stats: SKStats = GASService.calculateStats(records);
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-blue-500 selection:text-white">
-      {/* Top High Density Navbar Header */}
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-blue-500 selection:text-white relative">
+      {/* Top Navbar Header */}
       <Navbar
         webAppUrl={webAppUrl}
         source={source}
@@ -131,20 +187,13 @@ export default function App() {
                 <span>Status Storage: Data Lokal (Vercel Ready)</span>
               </div>
               <p className="text-slate-300">
-                Aplikasi siap didaftarkan di <b>Vercel.com</b>. Untuk menghubungkan dengan Google Sheets secara permanen, masukkan Web App URL Google Apps Script di Pengaturan API atau di Environment Variable Vercel (<code>VITE_GAS_WEB_APP_URL</code>).
+                Aplikasi berjalan di mode lokal. Untuk menghubungkan dengan Google Sheets secara permanen, masukkan Web App URL Google Apps Script.
               </p>
             </div>
             <div className="flex items-center space-x-2 shrink-0">
               <button
-                onClick={() => setIsCodeExportOpen(true)}
-                className="px-3.5 py-2 rounded bg-blue-600 hover:bg-blue-500 text-white font-bold transition-all shadow-md cursor-pointer flex items-center gap-1.5"
-              >
-                <Globe className="w-3.5 h-3.5" />
-                <span>Panduan Vercel</span>
-              </button>
-              <button
                 onClick={() => setIsSettingsOpen(true)}
-                className="px-3.5 py-2 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold transition-all cursor-pointer"
+                className="px-3.5 py-2 rounded bg-blue-600 hover:bg-blue-500 text-white font-bold transition-all shadow-md cursor-pointer"
               >
                 Input Web App URL
               </button>
@@ -177,29 +226,72 @@ export default function App() {
           }}
           onDeleteRecord={handleDeleteSK}
           onTriggerManualNotification={() => setIsTesterOpen(true)}
+          onOpenExportModal={() => setIsExportModalOpen(true)}
           isLoading={isLoading}
         />
       </main>
 
-      {/* High Density Footer Status Bar */}
-      <footer className="bg-slate-900 border-t border-slate-800 py-3 px-6 text-[10px] font-mono text-slate-400">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
-          <div className="flex items-center space-x-6">
-            <span>DATABASE: {source === 'GAS' ? 'cloud_google_sheets_live' : 'local_browser_cache'}</span>
-            <span className="hidden sm:inline">DEPLOYMENT: VERCEL_READY</span>
-            <span className="hidden md:inline">CRON_JOB: DAILY_00:00_WIB</span>
-          </div>
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-1.5">
-              <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
-              <span className="text-emerald-400 font-bold">SYSTEM_READY</span>
+      {/* Footer with copyright by Idris */}
+      <footer className="bg-slate-900 border-t border-slate-800 py-4 px-6 text-center text-xs text-slate-400 font-medium tracking-wide">
+        Copyright by Idris
+      </footer>
+
+      {/* Process Loading Overlay Animation Modal */}
+      {processLoading.isBusy && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl flex flex-col items-center space-y-4 text-center max-w-sm w-full mx-4 animate-in fade-in zoom-in-95 duration-200">
+            <div className="relative">
+              <div className="w-16 h-16 rounded-2xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-blue-400">
+                <Loader2 className="w-8 h-8 animate-spin" />
+              </div>
+              <div className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full animate-ping"></div>
             </div>
-            <button onClick={() => setIsCodeExportOpen(true)} className="hover:text-blue-400 transition-colors cursor-pointer underline">
-              Panduan Vercel & Export
-            </button>
+            <div>
+              <h4 className="text-sm font-bold text-white mb-1">Memproses Perintah</h4>
+              <p className="text-xs text-slate-400 font-medium">{processLoading.text}</p>
+            </div>
+            <div className="w-full bg-slate-950 h-1.5 rounded-full overflow-hidden border border-slate-800">
+              <div className="bg-gradient-to-r from-blue-500 to-emerald-400 h-full w-full animate-pulse"></div>
+            </div>
           </div>
         </div>
-      </footer>
+      )}
+
+      {/* Corner Toast Notifications Stack */}
+      <div className="fixed top-20 right-4 z-50 flex flex-col space-y-2.5 max-w-sm w-full pointer-events-none">
+        {toasts.map((toast) => (
+          <div
+            key={toast.id}
+            className={`pointer-events-auto p-4 rounded-2xl border shadow-2xl flex items-start justify-between space-x-3 transition-all duration-300 animate-in slide-in-from-top-3 ${
+              toast.type === 'success'
+                ? 'bg-slate-900/95 border-emerald-500/50 text-emerald-300 ring-1 ring-emerald-500/20'
+                : toast.type === 'error'
+                ? 'bg-slate-900/95 border-rose-500/50 text-rose-300 ring-1 ring-rose-500/20'
+                : 'bg-slate-900/95 border-blue-500/50 text-blue-300 ring-1 ring-blue-500/20'
+            }`}
+          >
+            <div className="flex items-start space-x-3">
+              <div className={`p-1.5 rounded-xl mt-0.5 ${
+                toast.type === 'success' ? 'bg-emerald-500/20 text-emerald-400' :
+                toast.type === 'error' ? 'bg-rose-500/20 text-rose-400' :
+                'bg-blue-500/20 text-blue-400'
+              }`}>
+                <CheckCircle2 className="w-4 h-4" />
+              </div>
+              <div>
+                <h5 className="font-bold text-xs text-white">{toast.title}</h5>
+                <p className="text-[11px] text-slate-300 mt-0.5 leading-snug">{toast.message}</p>
+              </div>
+            </div>
+            <button
+              onClick={() => removeToast(toast.id)}
+              className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-all cursor-pointer"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        ))}
+      </div>
 
       {/* Modals */}
       <GasGuideModal
@@ -236,6 +328,13 @@ export default function App() {
         record={editingRecord}
         onSave={handleEditSK}
       />
+
+      <ExportPrintModal
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+        records={records}
+      />
     </div>
   );
 }
+

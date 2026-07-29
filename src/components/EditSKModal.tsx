@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { SKRecord } from '../types';
 import { calculateExpiryDate } from '../utils/dateUtils';
-import { X, Edit3, Save, Calendar, Mail, Phone, Clock, FileText, CheckCircle2 } from 'lucide-react';
+import { X, Edit3, Save, Calendar, Mail, Phone, Clock, FileText, User, Layers } from 'lucide-react';
 
 interface EditSKModalProps {
   isOpen: boolean;
@@ -16,9 +16,11 @@ export const EditSKModal: React.FC<EditSKModalProps> = ({
   record,
   onSave
 }) => {
+  const [namaIdentitas, setNamaIdentitas] = useState('');
+  const [jenisDokumen, setJenisDokumen] = useState<'KGB (Kenaikan Gaji Berkala)' | 'KENPAN (Kenaikan Pangkat)' | 'Lainnya'>('KGB (Kenaikan Gaji Berkala)');
   const [noSK, setNoSK] = useState('');
   const [tanggalBuat, setTanggalBuat] = useState('');
-  const [durasiPilihan, setDurasiPilihan] = useState<'1 Tahun' | '3 Tahun' | '5 Tahun' | 'Custom'>('1 Tahun');
+  const [durasiPilihan, setDurasiPilihan] = useState<'1 Tahun' | '2 Tahun' | '3 Tahun' | '4 Tahun' | '5 Tahun' | 'Custom'>('2 Tahun');
   const [customTahun, setCustomTahun] = useState<number>(2);
   const [tanggalKadaluarsa, setTanggalKadaluarsa] = useState('');
   const [emailTujuan, setEmailTujuan] = useState('');
@@ -28,16 +30,22 @@ export const EditSKModal: React.FC<EditSKModalProps> = ({
 
   useEffect(() => {
     if (record) {
+      setNamaIdentitas(record.namaIdentitas || '');
       setNoSK(record.noSK || '');
       setTanggalBuat(record.tanggalBuat || '');
       setEmailTujuan(record.emailTujuan || '');
       setNoWATujuan(record.noWATujuan || '');
       setStatusNotifikasi((record.statusNotifikasi as any) === 'Terkirim' ? 'Terkirim' : 'Belum Terkirim');
 
+      const jenis = (record.jenisDokumen as any) || 'KGB (Kenaikan Gaji Berkala)';
+      setJenisDokumen(jenis);
+
       // Parse duration
-      const dur = record.durasiBerlaku || '1 Tahun';
+      const dur = record.durasiBerlaku || '2 Tahun';
       if (dur.includes('1 Tahun')) setDurasiPilihan('1 Tahun');
+      else if (dur.includes('2 Tahun')) setDurasiPilihan('2 Tahun');
       else if (dur.includes('3 Tahun')) setDurasiPilihan('3 Tahun');
+      else if (dur.includes('4 Tahun')) setDurasiPilihan('4 Tahun');
       else if (dur.includes('5 Tahun')) setDurasiPilihan('5 Tahun');
       else {
         setDurasiPilihan('Custom');
@@ -49,34 +57,33 @@ export const EditSKModal: React.FC<EditSKModalProps> = ({
     }
   }, [record]);
 
-  // Recalculate expiry date whenever creation date or duration changes
-  const handleTanggalBuatChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newDate = e.target.value;
-    setTanggalBuat(newDate);
-    recalculateExpiry(newDate, durasiPilihan, customTahun);
+  const handleJenisDokumenChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const val = e.target.value as 'KGB (Kenaikan Gaji Berkala)' | 'KENPAN (Kenaikan Pangkat)' | 'Lainnya';
+    setJenisDokumen(val);
+
+    let years = 2;
+    if (val === 'KGB (Kenaikan Gaji Berkala)') years = 2;
+    else if (val === 'KENPAN (Kenaikan Pangkat)') years = 4;
+    else years = 1;
+
+    recalculateExpiry(tanggalBuat, val, durasiPilihan, customTahun, years);
   };
 
-  const handleDurasiChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const newDur = e.target.value as '1 Tahun' | '3 Tahun' | '5 Tahun' | 'Custom';
-    setDurasiPilihan(newDur);
-    recalculateExpiry(tanggalBuat, newDur, customTahun);
-  };
-
-  const handleCustomTahunChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = Math.max(1, parseInt(e.target.value, 10) || 1);
-    setCustomTahun(val);
-    recalculateExpiry(tanggalBuat, 'Custom', val);
-  };
-
-  const recalculateExpiry = (tglBuat: string, dur: string, years: number) => {
+  const recalculateExpiry = (tglBuat: string, jenis: string, dur: string, cYears: number, overrideYears?: number) => {
     if (!tglBuat) return;
-    let durYears = 1;
-    if (dur === '1 Tahun') durYears = 1;
-    else if (dur === '3 Tahun') durYears = 3;
-    else if (dur === '5 Tahun') durYears = 5;
-    else if (dur === 'Custom') durYears = years;
+    let years = overrideYears || 2;
+    if (jenis === 'KGB (Kenaikan Gaji Berkala)') years = 2;
+    else if (jenis === 'KENPAN (Kenaikan Pangkat)') years = 4;
+    else {
+      if (dur === '1 Tahun') years = 1;
+      else if (dur === '2 Tahun') years = 2;
+      else if (dur === '3 Tahun') years = 3;
+      else if (dur === '4 Tahun') years = 4;
+      else if (dur === '5 Tahun') years = 5;
+      else if (dur === 'Custom') years = cYears;
+    }
 
-    const expiry = calculateExpiryDate(tglBuat, durYears);
+    const expiry = calculateExpiryDate(tglBuat, years);
     setTanggalKadaluarsa(expiry);
   };
 
@@ -84,15 +91,14 @@ export const EditSKModal: React.FC<EditSKModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!noSK || !tanggalBuat || !emailTujuan || !noWATujuan) return;
+    if (!namaIdentitas || !noSK || !tanggalBuat || !emailTujuan || !noWATujuan) return;
 
-    let durasiText = durasiPilihan;
-    if (durasiPilihan === 'Custom') {
-      durasiText = `${customTahun} Tahun (Custom)` as any;
-    }
+    let durasiText = `${jenisDokumen === 'KGB (Kenaikan Gaji Berkala)' ? '2 Tahun (KGB)' : jenisDokumen === 'KENPAN (Kenaikan Pangkat)' ? '4 Tahun (KENPAN)' : durasiPilihan}`;
 
     const updated: SKRecord = {
       ...record,
+      namaIdentitas,
+      jenisDokumen,
       noSK,
       tanggalBuat,
       durasiBerlaku: durasiText,
@@ -118,7 +124,7 @@ export const EditSKModal: React.FC<EditSKModalProps> = ({
               <Edit3 className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-bold text-base text-white">Edit Data Surat Keputusan (SK)</h3>
+              <h3 className="font-bold text-base text-white">Edit Data Dokumen SK</h3>
               <p className="text-xs text-slate-400 font-mono">No SK: {record.noSK}</p>
             </div>
           </div>
@@ -130,10 +136,47 @@ export const EditSKModal: React.FC<EditSKModalProps> = ({
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="p-6 text-xs space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Nama Identitas */}
+            <div className="md:col-span-2">
+              <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                Nama Identitas / Pegawai / NIP *
+              </label>
+              <div className="relative">
+                <User className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" />
+                <input
+                  type="text"
+                  required
+                  value={namaIdentitas}
+                  onChange={(e) => setNamaIdentitas(e.target.value)}
+                  className="w-full pl-9 pr-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white text-xs focus:ring-1 focus:ring-amber-500 outline-none"
+                  placeholder="Nama Identitas"
+                />
+              </div>
+            </div>
+
+            {/* Jenis Dokumen */}
+            <div>
+              <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                Jenis Dokumen *
+              </label>
+              <div className="relative">
+                <Layers className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" />
+                <select
+                  value={jenisDokumen}
+                  onChange={handleJenisDokumenChange}
+                  className="w-full pl-9 pr-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-amber-400 font-bold text-xs focus:ring-1 focus:ring-amber-500 outline-none"
+                >
+                  <option value="KGB (Kenaikan Gaji Berkala)">KGB (Otomatis 2 Tahun)</option>
+                  <option value="KENPAN (Kenaikan Pangkat)">KENPAN (Otomatis 4 Tahun)</option>
+                  <option value="Lainnya">Lainnya / SK Biasa</option>
+                </select>
+              </div>
+            </div>
+
             {/* No SK */}
             <div>
               <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">
-                No SK Surat Keputusan *
+                No SK / Dokumen *
               </label>
               <div className="relative">
                 <FileText className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" />
@@ -148,10 +191,10 @@ export const EditSKModal: React.FC<EditSKModalProps> = ({
               </div>
             </div>
 
-            {/* Tanggal Buat */}
+            {/* TMT (Terhitung Mulai Tanggal) */}
             <div>
               <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">
-                Tanggal Dibuat *
+                TMT (Terhitung Mulai Tanggal) *
               </label>
               <div className="relative">
                 <Calendar className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" />
@@ -159,38 +202,12 @@ export const EditSKModal: React.FC<EditSKModalProps> = ({
                   type="date"
                   required
                   value={tanggalBuat}
-                  onChange={handleTanggalBuatChange}
+                  onChange={(e) => {
+                    setTanggalBuat(e.target.value);
+                    recalculateExpiry(e.target.value, jenisDokumen, durasiPilihan, customTahun);
+                  }}
                   className="w-full pl-9 pr-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white text-xs focus:ring-1 focus:ring-amber-500 outline-none"
                 />
-              </div>
-            </div>
-
-            {/* Durasi Masa Berlaku */}
-            <div>
-              <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">
-                Masa Berlaku *
-              </label>
-              <div className="grid grid-cols-3 gap-2">
-                <select
-                  value={durasiPilihan}
-                  onChange={handleDurasiChange}
-                  className="col-span-2 px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white text-xs focus:ring-1 focus:ring-amber-500 outline-none"
-                >
-                  <option value="1 Tahun">1 Tahun</option>
-                  <option value="3 Tahun">3 Tahun</option>
-                  <option value="5 Tahun">5 Tahun</option>
-                  <option value="Custom">Custom (Tahun)</option>
-                </select>
-                {durasiPilihan === 'Custom' && (
-                  <input
-                    type="number"
-                    min="1"
-                    max="50"
-                    value={customTahun}
-                    onChange={handleCustomTahunChange}
-                    className="px-3 py-2 bg-indigo-950 border border-indigo-700 text-indigo-200 rounded-lg text-xs font-mono font-bold outline-none"
-                  />
-                )}
               </div>
             </div>
 
@@ -285,3 +302,4 @@ export const EditSKModal: React.FC<EditSKModalProps> = ({
     </div>
   );
 };
+

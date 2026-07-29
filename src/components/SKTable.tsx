@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { SKRecord, StatusFilter } from '../types';
 import { getSKStatus, formatIndonesianDate } from '../utils/dateUtils';
-import { Search, Filter, RefreshCw, Trash2, Edit3, Mail, Phone, Send, Copy, Check, AlertCircle, FileText, ExternalLink } from 'lucide-react';
+import { Search, Filter, RefreshCw, Trash2, Edit3, Mail, Phone, Send, Copy, Check, AlertCircle, FileText, FileSpreadsheet, User, Layers } from 'lucide-react';
 
 interface SKTableProps {
   records: SKRecord[];
@@ -11,6 +11,7 @@ interface SKTableProps {
   onEditRecord: (record: SKRecord) => void;
   onDeleteRecord: (id: string, noSK?: string) => void;
   onTriggerManualNotification: (record: SKRecord) => void;
+  onOpenExportModal: () => void;
   isLoading: boolean;
 }
 
@@ -22,6 +23,7 @@ export const SKTable: React.FC<SKTableProps> = ({
   onEditRecord,
   onDeleteRecord,
   onTriggerManualNotification,
+  onOpenExportModal,
   isLoading
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -29,10 +31,13 @@ export const SKTable: React.FC<SKTableProps> = ({
 
   // Filter records based on search query and active tab filter
   const filteredRecords = records.filter((r) => {
+    const query = searchQuery.toLowerCase();
     const matchesSearch =
-      r.noSK.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      r.emailTujuan.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      r.noWATujuan.includes(searchQuery);
+      r.noSK.toLowerCase().includes(query) ||
+      (r.namaIdentitas && r.namaIdentitas.toLowerCase().includes(query)) ||
+      (r.jenisDokumen && r.jenisDokumen.toLowerCase().includes(query)) ||
+      r.emailTujuan.toLowerCase().includes(query) ||
+      r.noWATujuan.includes(query);
 
     if (!matchesSearch) return false;
 
@@ -61,7 +66,7 @@ export const SKTable: React.FC<SKTableProps> = ({
           <div>
             <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
               <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-              <span>Ringkasan Data SK</span>
+              <span>Ringkasan Data SK & Dokumen</span>
             </h2>
             <p className="text-xs text-slate-500 dark:text-slate-400">
               Menampilkan {filteredRecords.length} dari total {records.length} Surat Keputusan
@@ -70,6 +75,16 @@ export const SKTable: React.FC<SKTableProps> = ({
 
           <div className="flex items-center space-x-2">
             <button
+              onClick={onOpenExportModal}
+              id="btn-cetak-excel"
+              className="flex items-center space-x-1.5 px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all shadow-md shadow-emerald-600/20 cursor-pointer"
+              title="Cetak Laporan dengan Kop Surat & Export Excel"
+            >
+              <FileSpreadsheet className="w-4 h-4" />
+              <span>Cetak Excel / Laporan</span>
+            </button>
+
+            <button
               onClick={onRefresh}
               id="btn-refresh-sk-table"
               disabled={isLoading}
@@ -77,7 +92,7 @@ export const SKTable: React.FC<SKTableProps> = ({
               title="Refresh data dari Google Sheets / Local Storage"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
-              <span>Refresh Data</span>
+              <span className="hidden sm:inline">Refresh Data</span>
             </button>
           </div>
         </div>
@@ -92,7 +107,7 @@ export const SKTable: React.FC<SKTableProps> = ({
             <input
               type="text"
               id="input-search-sk"
-              placeholder="Cari No SK, Email, atau No WA..."
+              placeholder="Cari Nama Identitas, Jenis Dokumen, No SK, Email..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
@@ -124,19 +139,21 @@ export const SKTable: React.FC<SKTableProps> = ({
         <table className="w-full text-left text-xs border-collapse">
           <thead>
             <tr className="bg-slate-50/80 dark:bg-slate-950/80 border-b border-slate-200/80 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wider">
+              <th className="py-3.5 px-4">Nama Identitas</th>
+              <th className="py-3.5 px-4">Jenis Dokumen</th>
               <th className="py-3.5 px-4">No SK</th>
-              <th className="py-3.5 px-4">Tanggal Buat</th>
-              <th className="py-3.5 px-4">Durasi</th>
-              <th className="py-3.5 px-4">Tanggal Kadaluarsa & Status</th>
-              <th className="py-3.5 px-4">Kontak Tujuan (Email & WA)</th>
-              <th className="py-3.5 px-4">Status Notifikasi</th>
+              <th className="py-3.5 px-4">TMT</th>
+              <th className="py-3.5 px-4">Masa Berlaku</th>
+              <th className="py-3.5 px-4">Kadaluarsa & Status</th>
+              <th className="py-3.5 px-4">Kontak Tujuan</th>
+              <th className="py-3.5 px-4">Notifikasi</th>
               <th className="py-3.5 px-4 text-center">Aksi</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
             {filteredRecords.length === 0 ? (
               <tr>
-                <td colSpan={7} className="py-12 text-center text-slate-400">
+                <td colSpan={9} className="py-12 text-center text-slate-400">
                   <div className="flex flex-col items-center justify-center space-y-2">
                     <AlertCircle className="w-8 h-8 text-slate-300 dark:text-slate-600" />
                     <p className="font-semibold text-slate-600 dark:text-slate-300">Tidak ada data SK ditemukan</p>
@@ -151,13 +168,28 @@ export const SKTable: React.FC<SKTableProps> = ({
 
                 return (
                   <tr key={r.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
+                    {/* Nama Identitas */}
+                    <td className="py-3.5 px-4 font-bold text-slate-900 dark:text-white">
+                      <div className="flex items-center space-x-1.5">
+                        <User className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                        <span>{r.namaIdentitas || '-'}</span>
+                      </div>
+                    </td>
+
+                    {/* Jenis Dokumen */}
+                    <td className="py-3.5 px-4">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/60">
+                        {r.jenisDokumen || 'SK Biasa'}
+                      </span>
+                    </td>
+
                     {/* No SK */}
                     <td className="py-3.5 px-4 font-mono font-bold text-slate-900 dark:text-white whitespace-nowrap">
-                      <div className="flex items-center space-x-2">
+                      <div className="flex items-center space-x-1.5">
                         <span>{r.noSK}</span>
                         <button
                           onClick={() => handleCopyNoSK(r.id || '', r.noSK)}
-                          className="p-1 rounded text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-all"
+                          className="p-1 rounded text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-all cursor-pointer"
                           title="Salin No SK"
                         >
                           {copiedId === r.id ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
@@ -165,7 +197,7 @@ export const SKTable: React.FC<SKTableProps> = ({
                       </div>
                     </td>
 
-                    {/* Tanggal Buat */}
+                    {/* TMT (Terhitung Mulai Tanggal) */}
                     <td className="py-3.5 px-4 text-slate-600 dark:text-slate-300 whitespace-nowrap">
                       {formatIndonesianDate(r.tanggalBuat)}
                     </td>
@@ -196,7 +228,7 @@ export const SKTable: React.FC<SKTableProps> = ({
                       <div className="space-y-1">
                         <div className="flex items-center text-slate-700 dark:text-slate-300">
                           <Mail className="w-3.5 h-3.5 mr-1.5 text-blue-500 shrink-0" />
-                          <span className="truncate max-w-[180px]">{r.emailTujuan}</span>
+                          <span className="truncate max-w-[150px]">{r.emailTujuan}</span>
                         </div>
                         <div className="flex items-center text-slate-700 dark:text-slate-300">
                           <Phone className="w-3.5 h-3.5 mr-1.5 text-emerald-500 shrink-0" />
@@ -208,14 +240,14 @@ export const SKTable: React.FC<SKTableProps> = ({
                     {/* Status Notifikasi */}
                     <td className="py-3.5 px-4 whitespace-nowrap">
                       <span
-                        className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold ${
+                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${
                           isTerkirim
                             ? 'bg-blue-100 text-blue-800 dark:bg-blue-950/80 dark:text-blue-300 border border-blue-300 dark:border-blue-800'
                             : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 border border-slate-200 dark:border-slate-700'
                         }`}
                       >
                         <div
-                          className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
+                          className={`w-1.5 h-1.5 rounded-full mr-1 ${
                             isTerkirim ? 'bg-blue-500' : 'bg-slate-400'
                           }`}
                         />
@@ -271,3 +303,4 @@ export const SKTable: React.FC<SKTableProps> = ({
     </div>
   );
 };
+

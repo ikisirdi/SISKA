@@ -9,43 +9,39 @@ const FONNTE_TOKEN_KEY = 'sk_management_fonnte_token_v1';
 const INITIAL_MOCK_DATA: SKRecord[] = [
   {
     id: 'sk-101',
-    noSK: '001/SK-DIR/HRD/I/2024',
+    namaIdentitas: 'Dr. Ahmad Fauzi, M.Si / NIP 198503122010011002',
+    jenisDokumen: 'KGB (Kenaikan Gaji Berkala)',
+    noSK: '001/SK-KGB/I/2024',
     tanggalBuat: '2024-01-15',
-    durasiBerlaku: '3 Tahun',
-    tanggalKadaluarsa: '2027-01-15',
-    emailTujuan: 'manager.hrd@perusahaan.co.id',
+    durasiBerlaku: '2 Tahun',
+    tanggalKadaluarsa: '2026-01-15',
+    emailTujuan: 'ahmad.fauzi@instansi.go.id',
     noWATujuan: '081234567890',
     statusNotifikasi: 'Belum Terkirim'
   },
   {
     id: 'sk-102',
-    noSK: '042/SK-KARS/IT/VIII/2021',
-    tanggalBuat: '2021-08-04',
-    durasiBerlaku: '5 Tahun',
-    tanggalKadaluarsa: calculateExpiryDate(new Date(Date.now() + 5 * 86400000).toISOString().split('T')[0], 0), // 5 days from today (Segera Kadaluarsa)
-    emailTujuan: 'kepala.it@perusahaan.co.id',
+    namaIdentitas: 'Siti Rahmawati, S.STP / NIP 199008242014022001',
+    jenisDokumen: 'KENPAN (Kenaikan Pangkat)',
+    noSK: '042/SK-KENPAN/VIII/2022',
+    tanggalBuat: '2022-08-04',
+    durasiBerlaku: '4 Tahun',
+    tanggalKadaluarsa: calculateExpiryDate(new Date(Date.now() + 5 * 86400000).toISOString().split('T')[0], 0), // 5 days from today
+    emailTujuan: 'siti.rahmawati@instansi.go.id',
     noWATujuan: '085712345678',
     statusNotifikasi: 'Belum Terkirim'
   },
   {
     id: 'sk-103',
-    noSK: '108/SK-LSP/MUTU/VII/2023',
+    namaIdentitas: 'Budi Santoso, S.Kom / NIP 198811052012011005',
+    jenisDokumen: 'KGB (Kenaikan Gaji Berkala)',
+    noSK: '108/SK-KGB/VII/2023',
     tanggalBuat: '2023-07-20',
-    durasiBerlaku: '1 Tahun',
-    tanggalKadaluarsa: '2024-07-20', // Kadaluarsa
-    emailTujuan: 'quality.assurance@perusahaan.co.id',
+    durasiBerlaku: '2 Tahun',
+    tanggalKadaluarsa: '2025-07-20',
+    emailTujuan: 'budi.santoso@instansi.go.id',
     noWATujuan: '082198765432',
     statusNotifikasi: 'Terkirim'
-  },
-  {
-    id: 'sk-104',
-    noSK: '215/SK-DIREKSI/OPS/III/2025',
-    tanggalBuat: '2025-03-10',
-    durasiBerlaku: '1 Tahun',
-    tanggalKadaluarsa: calculateExpiryDate(new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0], 0), // Exactly 7 days from today
-    emailTujuan: 'operasional@perusahaan.co.id',
-    noWATujuan: '081311223344',
-    statusNotifikasi: 'Belum Terkirim'
   }
 ];
 
@@ -239,6 +235,8 @@ export class GASService {
       // Note: GAS web app CORS post works using text/plain or standard FormData/JSON payload
       const payload = {
         action: 'createSK',
+        namaIdentitas: record.namaIdentitas || '',
+        jenisDokumen: record.jenisDokumen || '',
         noSK: record.noSK,
         tanggalBuat: record.tanggalBuat,
         durasiBerlaku: record.durasiBerlaku,
@@ -346,6 +344,8 @@ export class GASService {
       const payload = {
         action: 'updateSK',
         id: updatedSK.id,
+        namaIdentitas: updatedSK.namaIdentitas || '',
+        jenisDokumen: updatedSK.jenisDokumen || '',
         noSK: updatedSK.noSK,
         tanggalBuat: updatedSK.tanggalBuat,
         durasiBerlaku: updatedSK.durasiBerlaku,

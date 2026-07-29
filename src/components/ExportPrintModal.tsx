@@ -19,53 +19,108 @@ export const ExportPrintModal: React.FC<ExportPrintModalProps> = ({
 
   if (!isOpen) return null;
 
-  // Export to XLSX spreadsheet
-  const handleExportExcel = () => {
-    const excelData = records.map((r, index) => {
+  // Export to MS Word (.doc/.docx) format with Kop Surat
+  const handleExportWord = () => {
+    const dateStr = new Date().toISOString().split('T')[0];
+    const tableRowsHtml = records.map((r, index) => {
       const statusInfo = getSKStatus(r.tanggalKadaluarsa);
-      return {
-        'No': index + 1,
-        'Nama Identitas / Pegawai': r.namaIdentitas || '-',
-        'Jenis Dokumen': r.jenisDokumen || '-',
-        'Nomor SK / Dokumen': r.noSK,
-        'TMT (Terhitung Mulai Tanggal)': r.tanggalBuat,
-        'Masa Berlaku': r.durasiBerlaku,
-        'Tanggal Kadaluarsa': r.tanggalKadaluarsa,
-        'Status Masa Berlaku': statusInfo.status,
-        'Sisa Hari': statusInfo.daysRemaining,
-        'Email Tujuan': r.emailTujuan,
-        'No WhatsApp': r.noWATujuan,
-        'Status Notifikasi': r.statusNotifikasi || 'Belum Terkirim'
-      };
+      return `
+        <tr>
+          <td style="border:1px solid #333; padding:6px; text-align:center;">${index + 1}</td>
+          <td style="border:1px solid #333; padding:6px;"><b>${r.namaIdentitas || '-'}</b></td>
+          <td style="border:1px solid #333; padding:6px;">${r.jenisDokumen || '-'}</td>
+          <td style="border:1px solid #333; padding:6px; font-family:monospace;">${r.noSK}</td>
+          <td style="border:1px solid #333; padding:6px; text-align:center;">${formatIndonesianDate(r.tanggalBuat)}</td>
+          <td style="border:1px solid #333; padding:6px; text-align:center;">${r.durasiBerlaku}</td>
+          <td style="border:1px solid #333; padding:6px; text-align:center;"><b>${formatIndonesianDate(r.tanggalKadaluarsa)}</b></td>
+          <td style="border:1px solid #333; padding:6px; text-align:center;">${statusInfo.status}</td>
+        </tr>
+      `;
+    }).join('');
+
+    const wordHtml = `
+      <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+      <head>
+        <meta charset='utf-8'>
+        <title>Laporan Rekapitulasi SK</title>
+        <style>
+          @page { size: A4 portrait; margin: 20mm 15mm 20mm 15mm; }
+          body { font-family: 'Calibri', 'Arial', sans-serif; font-size: 11pt; color: #000; }
+          h1 { font-size: 13pt; text-align: center; margin: 0; padding: 0; }
+          h2 { font-size: 11pt; text-align: center; margin: 4px 0; }
+          p { margin: 3px 0; }
+          table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 10pt; }
+          th { background-color: #e2e8f0; border: 1px solid #333; padding: 8px; text-align: center; font-weight: bold; }
+          td { border: 1px solid #333; padding: 6px; }
+          .signature-table { width: 100%; margin-top: 35px; border: none; }
+          .signature-table td { border: none; text-align: center; }
+        </style>
+      </head>
+      <body>
+        <div style="text-align: center; margin-bottom: 12px;">
+          <img src="${window.location.origin}/kop_surat.png" style="width: 100%; max-height: 140px; object-fit: contain;" alt="Kop Surat Resmi" />
+          <div style="border-bottom: 3px double #000; margin-top: 8px;"></div>
+        </div>
+
+        <h1 style="text-transform: uppercase;">LAPORAN REKAPITULASI MONITORING SURAT KEPUTUSAN (SK)</h1>
+        <h2 style="font-weight: normal; font-size: 10pt;">Dokumen KGB (Kenaikan Gaji Berkala), KENPAN, dan SK Kedinasan</h2>
+        <p style="text-align: center; font-size: 9pt; color: #444;">Tanggal Cetak Laporan: ${currentDateFormatted} | Total Records: ${records.length} Dokumen</p>
+
+        <table>
+          <thead>
+            <tr>
+              <th width="5%">No</th>
+              <th width="24%">Nama Identitas / NIP</th>
+              <th width="15%">Jenis Dokumen</th>
+              <th width="18%">Nomor SK</th>
+              <th width="10%">TMT</th>
+              <th width="7%">Masa</th>
+              <th width="11%">Kadaluarsa</th>
+              <th width="10%">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${tableRowsHtml}
+          </tbody>
+        </table>
+
+        <table class="signature-table">
+          <tr>
+            <td width="50%">
+              <p>Mengetahui,</p>
+              <p><b>Pengelola SK & Monitoring</b></p>
+              <br/><br/><br/>
+              <p><u><b>Idris</b></u></p>
+              <p style="font-size: 9pt; color: #555;">NIP. Administrative Specialist</p>
+            </td>
+            <td width="50%">
+              <p>Dicetak Pada,</p>
+              <p><b>${currentDateFormatted}</b></p>
+              <br/><br/><br/>
+              <p><u><b>Sistem Monitoring SK</b></u></p>
+              <p style="font-size: 9pt; color: #555;">Verifikasi Digital Verified</p>
+            </td>
+          </tr>
+        </table>
+      </body>
+      </html>
+    `;
+
+    const blob = new Blob(['\ufeff', wordHtml], {
+      type: 'application/msword'
     });
 
-    const worksheet = XLSX.utils.json_to_sheet(excelData);
-    
-    // Set auto column width
-    const colWidths = [
-      { wch: 5 },
-      { wch: 30 },
-      { wch: 25 },
-      { wch: 25 },
-      { wch: 15 },
-      { wch: 15 },
-      { wch: 15 },
-      { wch: 20 },
-      { wch: 10 },
-      { wch: 28 },
-      { wch: 16 },
-      { wch: 18 }
-    ];
-    worksheet['!cols'] = colWidths;
-
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Data Monitoring SK');
-
-    const dateStr = new Date().toISOString().split('T')[0];
-    XLSX.writeFile(workbook, `Laporan_Monitoring_SK_${dateStr}.xlsx`);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Laporan_Monitoring_SK_${dateStr}.doc`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
-  // Trigger Print Laporan
+  // Trigger Print Laporan A4
   const handlePrint = () => {
     window.print();
   };
@@ -79,30 +134,30 @@ export const ExportPrintModal: React.FC<ExportPrintModalProps> = ({
         {/* Modal Header (Hidden on Print) */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 print:hidden">
           <div className="flex items-center space-x-3">
-            <div className="p-2.5 rounded-xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400">
-              <FileSpreadsheet className="w-5 h-5" />
+            <div className="p-2.5 rounded-xl bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-400">
+              <FileText className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-bold text-base text-slate-900 dark:text-white">Cetak Laporan & Export Excel</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Pratinjau dokumen resmi dengan Kop Surat & opsi unduh Excel (.xlsx)</p>
+              <h3 className="font-bold text-base text-slate-900 dark:text-white">Cetak Laporan A4 & Export Word</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Pratinjau dokumen resmi A4 dengan Kop Surat & opsi Cetak Word (.doc)</p>
             </div>
           </div>
 
           <div className="flex items-center space-x-2">
             <button
-              onClick={handleExportExcel}
-              className="flex items-center space-x-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-md shadow-emerald-600/20 transition-all cursor-pointer"
+              onClick={handleExportWord}
+              className="flex items-center space-x-1.5 px-4 py-2 rounded-xl bg-blue-700 hover:bg-blue-600 text-white text-xs font-bold shadow-md shadow-blue-700/20 transition-all cursor-pointer"
             >
-              <FileSpreadsheet className="w-4 h-4" />
-              <span>Download File Excel (.xlsx)</span>
+              <FileText className="w-4 h-4" />
+              <span>Cetak Word (.doc)</span>
             </button>
 
             <button
               onClick={handlePrint}
-              className="flex items-center space-x-1.5 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold shadow-md shadow-blue-600/20 transition-all cursor-pointer"
+              className="flex items-center space-x-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-md shadow-emerald-600/20 transition-all cursor-pointer"
             >
               <Printer className="w-4 h-4" />
-              <span>Cetak / Print PDF</span>
+              <span>Cetak / Print PDF A4</span>
             </button>
 
             <button

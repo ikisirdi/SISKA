@@ -45,9 +45,9 @@ const INITIAL_MOCK_DATA: SKRecord[] = [
   }
 ];
 
-// Default fallback values if localStorage is not set on a new device
-const DEFAULT_GAS_URL = (import.meta as any).env?.VITE_GAS_WEB_APP_URL || '';
-const DEFAULT_FONNTE_TOKEN = (import.meta as any).env?.VITE_FONNTE_TOKEN || '';
+// Default fallback values (Permanent default Web App URL & Fonnte Token)
+const DEFAULT_GAS_URL = 'https://script.google.com/macros/s/AKfycbwZah34nJCLmRWYjYH58N4cspxXHYSlo4NpQlgGYkByGpSmRyAlTnJsys86C_7Fw3j2/exec';
+const DEFAULT_FONNTE_TOKEN = 'hknvP2hZXsbcnmpNgiBn';
 
 export class GASService {
   // Get stored Web App URL (LocalStorage takes priority, falls back to Default/ENV)

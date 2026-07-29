@@ -31,14 +31,14 @@ export const NotificationTesterModal: React.FC<NotificationTesterModalProps> = (
     if (!selectedRecord) return;
     setIsSendingFonnte(true);
 
-    const message = `⚠️ *PENGINGAT KADALUARSA SK* ⚠️\n\nNomor SK: *${selectedRecord.noSK}*\nTanggal Buat: ${selectedRecord.tanggalBuat}\nMasa Berlaku: ${selectedRecord.durasiBerlaku}\nTanggal Kadaluarsa: *${selectedRecord.tanggalKadaluarsa}*\nEmail Tujuan: ${selectedRecord.emailTujuan}\n\n_Mohon segera diproses perpanjangannya._\n*Sistem Manajemen SK*`;
+    const message = `⚠️ *PENGINGAT KADALUARSA DOKUMEN* ⚠️\n\n👤 Nama: *${selectedRecord.namaIdentitas || '-'}*\n📁 Jenis Dokumen: *${selectedRecord.jenisDokumen || 'SK'}*\n📄 Nomor SK: *${selectedRecord.noSK}*\n📅 Tanggal Buat: ${selectedRecord.tanggalBuat}\n⏳ Masa Berlaku: ${selectedRecord.durasiBerlaku}\n🚨 Tanggal Kadaluarsa: *${selectedRecord.tanggalKadaluarsa}*\n✉️ Email Tujuan: ${selectedRecord.emailTujuan}\n\n_Mohon segera diproses perpanjangannya._\n*Sistem Monitoring SK & Kepegawaian*`;
 
     const res = await GASService.sendFonnteWhatsApp(selectedRecord.noWATujuan, message);
     setIsSendingFonnte(false);
 
     if (res.success) {
       onUpdateStatus(selectedRecord.id || '', 'Terkirim');
-      setSentLog(`[FONNTE WA SUCCESS] ${res.message}`);
+      setSentLog(`[FONNTE WA SUCCESS] Status Fonnte Gateway: Sent (${res.message}). Jika pesan belum masuk di HP penerima, pastikan HP/Device Fonnte (6285244544676) terhubung ke internet & aktif di md.fonnte.com!`);
     } else {
       setSentLog(`[FONNTE WA ERROR] ${res.message}`);
     }
@@ -51,9 +51,11 @@ export const NotificationTesterModal: React.FC<NotificationTesterModalProps> = (
     let cleanWA = selectedRecord.noWATujuan.replace(/[^0-9]/g, '');
     if (cleanWA.startsWith('0')) {
       cleanWA = '62' + cleanWA.substring(1);
+    } else if (cleanWA.startsWith('8')) {
+      cleanWA = '62' + cleanWA;
     }
 
-    const message = `⚠️ *PENGINGAT KADALUARSA SK* ⚠️\n\nNomor SK: *${selectedRecord.noSK}*\nTanggal Buat: ${selectedRecord.tanggalBuat}\nMasa Berlaku: ${selectedRecord.durasiBerlaku}\nTanggal Kadaluarsa: *${selectedRecord.tanggalKadaluarsa}*\nEmail Tujuan: ${selectedRecord.emailTujuan}\n\n_Mohon segera diproses perpanjangannya._\n*Sistem Manajemen SK Perusahaan*`;
+    const message = `⚠️ *PENGINGAT KADALUARSA DOKUMEN* ⚠️\n\n👤 Nama: *${selectedRecord.namaIdentitas || '-'}*\n📁 Jenis Dokumen: *${selectedRecord.jenisDokumen || 'SK'}*\n📄 Nomor SK: *${selectedRecord.noSK}*\n📅 Tanggal Buat: ${selectedRecord.tanggalBuat}\n⏳ Masa Berlaku: ${selectedRecord.durasiBerlaku}\n🚨 Tanggal Kadaluarsa: *${selectedRecord.tanggalKadaluarsa}*\n✉️ Email Tujuan: ${selectedRecord.emailTujuan}\n\n_Mohon segera diproses perpanjangannya._\n*Sistem Monitoring SK & Kepegawaian*`;
 
     const waUrl = `https://wa.me/${cleanWA}?text=${encodeURIComponent(message)}`;
     window.open(waUrl, '_blank');
@@ -66,8 +68,8 @@ export const NotificationTesterModal: React.FC<NotificationTesterModalProps> = (
   const handleSendEmailDirect = () => {
     if (!selectedRecord) return;
 
-    const subject = `[PENGINGAT] SK No ${selectedRecord.noSK} Akan Kadaluarsa!`;
-    const body = `Halo,\n\nIni adalah pengingat otomatis mengenai Surat Keputusan (SK):\n- Nomor SK: ${selectedRecord.noSK}\n- Tanggal Buat: ${formatIndonesianDate(selectedRecord.tanggalBuat)}\n- Masa Berlaku: ${selectedRecord.durasiBerlaku}\n- Tanggal Kadaluarsa: ${formatIndonesianDate(selectedRecord.tanggalKadaluarsa)}\n- Kontak WA: ${selectedRecord.noWATujuan}\n\nMohon segera dilakukan proses perpanjangan SK sebelum tanggal kadaluarsa.\n\nTerima Kasih,\nSistem Manajemen SK`;
+    const subject = `[PENGINGAT KADALUARSA] ${selectedRecord.jenisDokumen || 'SK'} No ${selectedRecord.noSK} - ${selectedRecord.namaIdentitas || ''}`;
+    const body = `Halo,\n\nIni adalah pengingat otomatis mengenai dokumen/SK kepegawaian:\n- Nama Identitas: ${selectedRecord.namaIdentitas || '-'}\n- Jenis Dokumen: ${selectedRecord.jenisDokumen || '-'}\n- Nomor SK: ${selectedRecord.noSK}\n- Tanggal Buat / TMT: ${formatIndonesianDate(selectedRecord.tanggalBuat)}\n- Masa Berlaku: ${selectedRecord.durasiBerlaku}\n- Tanggal Kadaluarsa: ${formatIndonesianDate(selectedRecord.tanggalKadaluarsa)}\n- Kontak WA: ${selectedRecord.noWATujuan}\n\nMohon segera dilakukan proses perpanjangan SK sebelum tanggal kadaluarsa.\n\nTerima Kasih,\nSistem Monitoring SK & Kepegawaian`;
 
     const mailtoUrl = `mailto:${selectedRecord.emailTujuan}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     window.open(mailtoUrl, '_blank');
@@ -121,7 +123,7 @@ export const NotificationTesterModal: React.FC<NotificationTesterModalProps> = (
           {/* Select SK to Test */}
           <div>
             <label className="block text-xs font-semibold text-slate-300 mb-1.5" htmlFor="select-sk-tester">
-              Pilih SK yang Akan Dikirim Notifikasi:
+              Pilih SK / Pegawai yang Akan Dikirim Notifikasi:
             </label>
             <select
               id="select-sk-tester"
@@ -131,7 +133,7 @@ export const NotificationTesterModal: React.FC<NotificationTesterModalProps> = (
             >
               {records.map((r) => (
                 <option key={r.id} value={r.id}>
-                  {r.noSK} — Expire: {r.tanggalKadaluarsa} ({r.statusNotifikasi})
+                  {r.namaIdentitas ? `${r.namaIdentitas} | ` : ''}{r.noSK} ({r.jenisDokumen || 'SK'}) — Expire: {r.tanggalKadaluarsa} ({r.statusNotifikasi})
                 </option>
               ))}
             </select>

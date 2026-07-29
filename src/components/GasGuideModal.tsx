@@ -487,7 +487,11 @@ function sendWhatsAppNotification(noWA, namaIdentitas, jenisDokumen, noSK, tangg
     const payload = {
       target: cleanWA,
       message: message,
-      countryCode: '62'
+      delay: '2'
+      // CATATAN PENTING FONNTE:
+      // Karena target sudah diawali '62' (misal: 6285244544676), JANGAN sertakan countryCode: '62'.
+      // Jika countryCode: '62' disertakan bersama target '628...', Fonnte akan mengubah nomor menjadi 62628...
+      // yang menyebabkan kuota terpotong (status: sent) tetapi HP WhatsApp penerima tidak mendapatkan pesan (state: 0).
     };
     
     const options = {

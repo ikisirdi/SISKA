@@ -19,9 +19,35 @@ export const ExportPrintModal: React.FC<ExportPrintModalProps> = ({
 
   if (!isOpen) return null;
 
-  // Export to MS Word (.doc/.docx) format with Kop Surat
-  const handleExportWord = () => {
+  // Helper to convert /kop_surat.png into a base64 Data URL for embedding into MS Word (.doc)
+  const getKopSuratBase64 = async (): Promise<string> => {
+    try {
+      const response = await fetch('/kop_surat.png');
+      if (!response.ok) throw new Error('Failed to fetch image');
+      const blob = await response.blob();
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = () => resolve('');
+        reader.readAsDataURL(blob);
+      });
+    } catch (err) {
+      console.warn('Could not load kop_surat.png as Base64:', err);
+      return '';
+    }
+  };
+
+  // Export to MS Word (.doc/.docx) format with Base64 embedded Kop Surat
+  const handleExportWord = async () => {
     const dateStr = new Date().toISOString().split('T')[0];
+    const currentDateFormatted = formatIndonesianDate(dateStr);
+    
+    // Convert Kop Surat image to Base64 so MS Word can render it natively offline
+    const base64Image = await getKopSuratBase64();
+    const kopHeaderHtml = base64Image
+      ? `<img src="${base64Image}" style="width: 100%; max-height: 140px; object-fit: contain;" alt="Kop Surat Pengadilan Agama Paniai" />`
+      : `<img src="${window.location.origin}/kop_surat.png" style="width: 100%; max-height: 140px; object-fit: contain;" alt="Kop Surat Pengadilan Agama Paniai" />`;
+
     const tableRowsHtml = records.map((r, index) => {
       const statusInfo = getSKStatus(r.tanggalKadaluarsa);
       return `
@@ -42,7 +68,7 @@ export const ExportPrintModal: React.FC<ExportPrintModalProps> = ({
       <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
       <head>
         <meta charset='utf-8'>
-        <title>Laporan Rekapitulasi SK</title>
+        <title>Laporan Rekapitulasi SK - Pengadilan Agama Paniai</title>
         <style>
           @page { size: A4 portrait; margin: 20mm 15mm 20mm 15mm; }
           body { font-family: 'Calibri', 'Arial', sans-serif; font-size: 11pt; color: #000; }
@@ -58,7 +84,7 @@ export const ExportPrintModal: React.FC<ExportPrintModalProps> = ({
       </head>
       <body>
         <div style="text-align: center; margin-bottom: 12px;">
-          <img src="${window.location.origin}/kop%20surat.png" style="width: 100%; max-height: 140px; object-fit: contain;" alt="Kop Surat Resmi" />
+          ${kopHeaderHtml}
           <div style="border-bottom: 3px double #000; margin-top: 8px;"></div>
         </div>
 
@@ -90,7 +116,7 @@ export const ExportPrintModal: React.FC<ExportPrintModalProps> = ({
               <p>Mengetahui,</p>
               <p><b>Pengelola SK & Monitoring</b></p>
               <br/><br/><br/>
-              <p><u><b>Idris</b></u></p>
+              <p><u><b>Nama</b></u></p>
               <p style="font-size: 9pt; color: #555;">NIP. Administrative Specialist</p>
             </td>
             <td width="50%">
@@ -120,24 +146,16 @@ export const ExportPrintModal: React.FC<ExportPrintModalProps> = ({
     URL.revokeObjectURL(url);
   };
 
-  // Trigger Print Laporan Resmi A4 (Modal Content)
+  // Trigger Print Laporan Resmi A4 (PDF)
   const handlePrint = () => {
     window.print();
-  };
-
-  // Trigger Print Tampilan Aplikasi / Dashboard Screenshot View
-  const handlePrintDashboard = () => {
-    onClose();
-    setTimeout(() => {
-      window.print();
-    }, 300);
   };
 
   const currentDateFormatted = formatIndonesianDate(new Date().toISOString().split('T')[0]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/80 backdrop-blur-sm overflow-y-auto print:p-0 print:bg-white print:static print:inset-auto">
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-5xl shadow-2xl text-slate-900 dark:text-slate-100 overflow-hidden my-auto print:border-0 print:shadow-none print:w-full print:max-w-none print:rounded-none print:bg-white print:text-black">
+    <div className="printable-modal-overlay fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/80 backdrop-blur-sm overflow-y-auto print:p-0 print:bg-white print:static print:inset-auto">
+      <div className="printable-modal-card bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-5xl shadow-2xl text-slate-900 dark:text-slate-100 overflow-hidden my-auto print:border-0 print:shadow-none print:w-full print:max-w-none print:rounded-none print:bg-white print:text-black">
         
         {/* Modal Header (Hidden on Print) */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 print:hidden">
@@ -147,7 +165,7 @@ export const ExportPrintModal: React.FC<ExportPrintModalProps> = ({
             </div>
             <div>
               <h3 className="font-bold text-base text-slate-900 dark:text-white">Cetak Laporan A4 & Export Word</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Pilih format cetak resmi A4 (Kop Surat) atau screenshot tampilan dashboard aplikasi</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Pratinjau laporan rekapitulasi data dengan Kop Surat Pengadilan Agama Paniai</p>
             </div>
           </div>
 
@@ -168,15 +186,6 @@ export const ExportPrintModal: React.FC<ExportPrintModalProps> = ({
             >
               <Printer className="w-4 h-4" />
               <span>Cetak PDF Laporan A4</span>
-            </button>
-
-            <button
-              onClick={handlePrintDashboard}
-              className="flex items-center space-x-1.5 px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-md shadow-indigo-600/20 transition-all cursor-pointer"
-              title="Cetak Screenshot / Tampilan Halaman Dashboard Aplikasi"
-            >
-              <Printer className="w-4 h-4" />
-              <span>Cetak Tampilan Aplikasi</span>
             </button>
 
             <button

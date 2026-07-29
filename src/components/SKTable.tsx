@@ -81,7 +81,7 @@ export const SKTable: React.FC<SKTableProps> = ({
               title="Cetak Laporan dengan Kop Surat & Export Excel"
             >
               <FileSpreadsheet className="w-4 h-4" />
-              <span>Cetak Excel / Laporan</span>
+              <span>Cetak Laporan</span>
             </button>
 
             <button

@@ -99,9 +99,10 @@ export class GASService {
 
     try {
       const formData = new FormData();
+      // Target sudah diawali 62 (contoh: 6281226163293). Jangan kirim 'countryCode': '62' agar Fonnte tidak mengubahnya jadi 626281226163293 (yang membuat status sent tapi state 0)
       formData.append('target', cleanWA);
       formData.append('message', message);
-      formData.append('countryCode', '62');
+      formData.append('delay', '2');
 
       const response = await fetch('https://api.fonnte.com/send', {
         method: 'POST',
@@ -232,7 +233,6 @@ export class GASService {
 
     // Try posting to GAS Web App
     try {
-      // Note: GAS web app CORS post works using text/plain or standard FormData/JSON payload
       const payload = {
         action: 'createSK',
         namaIdentitas: record.namaIdentitas || '',
@@ -248,7 +248,7 @@ export class GASService {
 
       await fetch(gasUrl, {
         method: 'POST',
-        mode: 'no-cors', // Standard Google Apps Script redirect workaround for CORS
+        mode: 'no-cors',
         headers: {
           'Content-Type': 'text/plain;charset=utf-8'
         },
@@ -270,11 +270,44 @@ export class GASService {
     }
   }
 
-  // Update Notification status manually or after cron simulation
+  // Update Notification status manually or after sending notification (saves locally AND syncs to Google Sheets)
   static updateNotificationStatus(id: string, status: 'Belum Terkirim' | 'Terkirim'): SKRecord[] {
     const current = this.getLocalRecords();
+    const targetItem = current.find(item => item.id === id);
     const updated = current.map(item => item.id === id ? { ...item, statusNotifikasi: status } : item);
     this.saveLocalRecords(updated);
+
+    // Sync status change to GAS Web App (Google Sheets)
+    const gasUrl = this.getWebAppUrl();
+    if (gasUrl && targetItem) {
+      try {
+        const payload = {
+          action: 'updateSK',
+          id: targetItem.id,
+          namaIdentitas: targetItem.namaIdentitas || '',
+          jenisDokumen: targetItem.jenisDokumen || '',
+          noSK: targetItem.noSK,
+          tanggalBuat: targetItem.tanggalBuat,
+          durasiBerlaku: targetItem.durasiBerlaku,
+          tanggalKadaluarsa: targetItem.tanggalKadaluarsa,
+          emailTujuan: targetItem.emailTujuan,
+          noWATujuan: targetItem.noWATujuan,
+          statusNotifikasi: status
+        };
+
+        fetch(gasUrl, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: {
+            'Content-Type': 'text/plain;charset=utf-8'
+          },
+          body: JSON.stringify(payload)
+        }).catch(err => console.error('Error syncing status update to GAS:', err));
+      } catch (err) {
+        console.error('Error in sync notification status to GAS:', err);
+      }
+    }
+
     return updated;
   }
 

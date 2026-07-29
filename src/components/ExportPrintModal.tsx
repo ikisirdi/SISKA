@@ -58,7 +58,7 @@ export const ExportPrintModal: React.FC<ExportPrintModalProps> = ({
       </head>
       <body>
         <div style="text-align: center; margin-bottom: 12px;">
-          <img src="${window.location.origin}/kop_surat.png" style="width: 100%; max-height: 140px; object-fit: contain;" alt="Kop Surat Resmi" />
+          <img src="${window.location.origin}/kop%20surat.png" style="width: 100%; max-height: 140px; object-fit: contain;" alt="Kop Surat Resmi" />
           <div style="border-bottom: 3px double #000; margin-top: 8px;"></div>
         </div>
 
@@ -175,14 +175,14 @@ export const ExportPrintModal: React.FC<ExportPrintModalProps> = ({
           {/* Gambar Kop Surat */}
           <div className="w-full flex flex-col items-center justify-center mb-4 border-b border-slate-300 dark:border-slate-700 pb-3 print:border-black">
             <img
-              src="/kop_surat.png"
+              src="/kop%20surat.png"
               alt="Kop Surat Resmi"
               className="w-full max-h-40 object-contain print:max-h-44 print:w-full print:block"
               onError={(e) => {
                 const target = e.currentTarget;
-                if (!target.dataset.triedEscaped) {
-                  target.dataset.triedEscaped = 'true';
-                  target.src = '/kop%20surat.png';
+                if (!target.dataset.triedUnderscore) {
+                  target.dataset.triedUnderscore = 'true';
+                  target.src = '/kop_surat.png';
                 } else {
                   target.style.display = 'none';
                   const fallbackEl = document.getElementById('kop-fallback-header');

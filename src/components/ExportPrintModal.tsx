@@ -118,16 +118,36 @@ export const ExportPrintModal: React.FC<ExportPrintModalProps> = ({
         <div className="p-6 sm:p-8 space-y-6 max-h-[80vh] overflow-y-auto print:max-h-none print:overflow-visible print:p-0" ref={printRef}>
           
           {/* Gambar Kop Surat */}
-          <div className="w-full flex justify-center mb-4">
+          <div className="w-full flex flex-col items-center justify-center mb-4 border-b border-slate-300 dark:border-slate-700 pb-3 print:border-black">
             <img
               src="/kop_surat.png"
               alt="Kop Surat Resmi"
-              className="w-full max-h-36 object-contain"
+              className="w-full max-h-40 object-contain print:max-h-44 print:w-full print:block"
               onError={(e) => {
-                // Fallback text Kop Surat if image not found
-                (e.target as HTMLElement).style.display = 'none';
+                const target = e.currentTarget;
+                if (!target.dataset.triedEscaped) {
+                  target.dataset.triedEscaped = 'true';
+                  target.src = '/kop%20surat.png';
+                } else {
+                  target.style.display = 'none';
+                  const fallbackEl = document.getElementById('kop-fallback-header');
+                  if (fallbackEl) fallbackEl.style.display = 'block';
+                }
               }}
             />
+            {/* Fallback Kop Surat Header jika gambar tidak dapat dimuat */}
+            <div id="kop-fallback-header" className="hidden text-center w-full py-2">
+              <h1 className="text-xl sm:text-2xl font-black uppercase tracking-widest text-slate-900 dark:text-white print:text-black">
+                PEMERINTAH REPUBLIK INDONESIA
+              </h1>
+              <h2 className="text-sm sm:text-base font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200 print:text-black mt-0.5">
+                KANTOR DINAS KEDINASAN & MANAJEMEN KEPEGAWAIAN
+              </h2>
+              <p className="text-xs font-medium text-slate-600 dark:text-slate-400 print:text-slate-700 mt-1">
+                Jalan Utama Perkantoran No. 01 | Telp: (021) 555-0199 | Email: sekretariat@dinas.go.id
+              </p>
+              <div className="w-full border-b-4 border-double border-slate-900 dark:border-slate-100 print:border-black mt-2"></div>
+            </div>
           </div>
 
           {/* Document Header Text */}

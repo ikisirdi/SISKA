@@ -8,7 +8,7 @@ interface GasGuideModalProps {
 
 export const GAS_CODE_GS = `/**
  * BACKEND GOOGLE APPS SCRIPT (Code.gs)
- * Dashboard Manajemen SK (Surat Keputusan) - Serverless Backend
+ * Dashboard Manajemen SK & Dokumen (KGB, KENPAN, SK Kedinasan)
  * 
  * PENTING: Setiap kali mengubah kode ini, lakukan Deployment Ulang:
  * Deploy > Manage deployments > Edit (Ikon Pensil) > Version: "New version" > Deploy
@@ -35,13 +35,15 @@ function responseJSON(data) {
     .setMimeType(ContentService.MimeType.JSON);
 }
 
-/** Helper Sheet Getter / Auto-Create Header */
+/** Helper Sheet Getter / Auto-Create Header 9 Kolom */
 function getOrCreateSheet() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   let sheet = ss.getSheetByName(SHEET_NAME);
   if (!sheet) {
     sheet = ss.insertSheet(SHEET_NAME);
     sheet.appendRow([
+      "Nama Identitas",
+      "Jenis Dokumen",
       "No SK",
       "Tanggal Buat",
       "Durasi Berlaku",
@@ -50,7 +52,7 @@ function getOrCreateSheet() {
       "No WA Tujuan",
       "Status Notifikasi"
     ]);
-    sheet.getRange(1, 1, 1, 7).setFontWeight("bold").setBackground("#e2e8f0");
+    sheet.getRange(1, 1, 1, 9).setFontWeight("bold").setBackground("#e2e8f0");
   }
   return sheet;
 }
@@ -66,7 +68,7 @@ function formatDate(val) {
 
 /**
  * 1. FUNGSI GET API (doGet)
- * Menangani Fetch List SK, serta fallback Delete & Update via GET URL parameters
+ * Menangani Fetch List SK, serta Delete & Update via GET Parameters
  */
 function doGet(e) {
   try {
@@ -92,20 +94,40 @@ function doGet(e) {
     }
 
     const records = [];
+    const is9Col = data[0].length >= 9 && data[0][0] === "Nama Identitas";
+
     for (let i = 1; i < data.length; i++) {
       const row = data[i];
-      if (!row[0]) continue; // Skip baris kosong
+      if (!row[0] && !row[2]) continue; // Skip baris kosong
       
-      records.push({
-        id: "sk-row-" + (i + 1),
-        noSK: String(row[0]).trim(),
-        tanggalBuat: formatDate(row[1]),
-        durasiBerlaku: String(row[2]).trim(),
-        tanggalKadaluarsa: formatDate(row[3]),
-        emailTujuan: String(row[4]).trim(),
-        noWATujuan: String(row[5]).trim(),
-        statusNotifikasi: String(row[6] || "Belum Terkirim").trim()
-      });
+      if (is9Col) {
+        records.push({
+          id: "sk-row-" + (i + 1),
+          namaIdentitas: String(row[0] || "").trim(),
+          jenisDokumen: String(row[1] || "").trim(),
+          noSK: String(row[2] || "").trim(),
+          tanggalBuat: formatDate(row[3]),
+          durasiBerlaku: String(row[4] || "").trim(),
+          tanggalKadaluarsa: formatDate(row[5]),
+          emailTujuan: String(row[6] || "").trim(),
+          noWATujuan: String(row[7] || "").trim(),
+          statusNotifikasi: String(row[8] || "Belum Terkirim").trim()
+        });
+      } else {
+        // Fallback format 7 kolom lama
+        records.push({
+          id: "sk-row-" + (i + 1),
+          namaIdentitas: "-",
+          jenisDokumen: "SK Biasa",
+          noSK: String(row[0] || "").trim(),
+          tanggalBuat: formatDate(row[1]),
+          durasiBerlaku: String(row[2] || "").trim(),
+          tanggalKadaluarsa: formatDate(row[3]),
+          emailTujuan: String(row[4] || "").trim(),
+          noWATujuan: String(row[5] || "").trim(),
+          statusNotifikasi: String(row[6] || "Belum Terkirim").trim()
+        });
+      }
     }
 
     return responseJSON({ status: "success", data: records });
@@ -116,14 +138,13 @@ function doGet(e) {
 
 /**
  * 2. FUNGSI POST API (doPost)
- * Menangani Tambah Data, Edit Data, Hapus Data, & Trigger Notifikasi
+ * Menangani Input (Tambah), Update (Edit), Delete (Hapus), & Trigger Notifikasi
  */
 function doPost(e) {
   try {
     const sheet = getOrCreateSheet();
     let contents = {};
 
-    // Safe Parsing Body Payload JSON
     if (e && e.postData && e.postData.contents) {
       try {
         contents = JSON.parse(e.postData.contents);
@@ -146,6 +167,8 @@ function doPost(e) {
     // 2. ACTION: UPDATE SK
     if (action === "updateSK") {
       const payload = {
+        namaIdentitas: contents.namaIdentitas || params.namaIdentitas || "",
+        jenisDokumen: contents.jenisDokumen || params.jenisDokumen || "",
         noSK: contents.noSK || params.noSK || "",
         tanggalBuat: contents.tanggalBuat || params.tanggalBuat || "",
         durasiBerlaku: contents.durasiBerlaku || params.durasiBerlaku || "",
@@ -161,20 +184,24 @@ function doPost(e) {
     if (action === "triggerNotification" || action === "sendNotification") {
       const email = contents.emailTujuan || params.emailTujuan || "";
       const noSK = contents.noSK || params.noSK || "";
+      const nama = contents.namaIdentitas || params.namaIdentitas || "-";
+      const jenis = contents.jenisDokumen || params.jenisDokumen || "SK";
       const tglBuat = contents.tanggalBuat || params.tanggalBuat || "";
       const durasi = contents.durasiBerlaku || params.durasiBerlaku || "";
       const tglKadaluarsa = contents.tanggalKadaluarsa || params.tanggalKadaluarsa || "";
       const noWA = contents.noWATujuan || params.noWATujuan || "";
 
-      if (email) sendEmailNotification(email, noSK, tglBuat, durasi, tglKadaluarsa);
-      if (noWA) sendWhatsAppNotification(noWA, noSK, tglBuat, durasi, tglKadaluarsa);
+      if (email) sendEmailNotification(email, nama, jenis, noSK, tglBuat, durasi, tglKadaluarsa);
+      if (noWA) sendWhatsAppNotification(noWA, nama, jenis, noSK, tglBuat, durasi, tglKadaluarsa);
 
       if (noSK) {
         const data = sheet.getDataRange().getValues();
         const normTarget = normalizeSK(noSK);
         for (let i = 1; i < data.length; i++) {
-          if (normalizeSK(data[i][0]) === normTarget) {
-            sheet.getRange(i + 1, 7).setValue("Terkirim");
+          const colNoSK = data[0][0] === "Nama Identitas" ? data[i][2] : data[i][0];
+          if (normalizeSK(colNoSK) === normTarget) {
+            const statusColIdx = data[0][0] === "Nama Identitas" ? 9 : 7;
+            sheet.getRange(i + 1, statusColIdx).setValue("Terkirim");
             break;
           }
         }
@@ -182,12 +209,14 @@ function doPost(e) {
 
       return responseJSON({
         status: "success",
-        message: "Notifikasi untuk SK " + noSK + " berhasil diproses!"
+        message: "Notifikasi untuk Dokumen " + noSK + " berhasil diproses!"
       });
     }
 
-    // 4. ACTION: CREATE / TAMBAH SK BARU
+    // 4. ACTION: CREATE / INPUT DATA BARU
     if (action === "createSK" || action === "addSK") {
+      const namaIdentitas = contents.namaIdentitas || params.namaIdentitas || "";
+      const jenisDokumen = contents.jenisDokumen || params.jenisDokumen || "";
       const noSK = contents.noSK || params.noSK || "";
       const tanggalBuat = contents.tanggalBuat || params.tanggalBuat || "";
       const durasiBerlaku = contents.durasiBerlaku || params.durasiBerlaku || "";
@@ -200,31 +229,27 @@ function doPost(e) {
         return responseJSON({ status: "error", message: "Nomor SK wajib diisi!" });
       }
 
-      // Cek apakah No SK sudah ada, jika ada timpa/update baris tersebut (mencegah duplikasi!)
+      // Cek apakah No SK sudah ada, jika ada timpa/update baris tersebut
       const data = sheet.getDataRange().getValues();
       const normTarget = normalizeSK(noSK);
       let existingRow = -1;
+
       for (let i = 1; i < data.length; i++) {
-        if (normalizeSK(data[i][0]) === normTarget) {
+        const colNoSK = data[0][0] === "Nama Identitas" ? data[i][2] : data[i][0];
+        if (normalizeSK(colNoSK) === normTarget) {
           existingRow = i + 1;
           break;
         }
       }
 
       if (existingRow > 0) {
-        if (tanggalBuat) sheet.getRange(existingRow, 2).setValue(tanggalBuat);
-        if (durasiBerlaku) sheet.getRange(existingRow, 3).setValue(durasiBerlaku);
-        if (tanggalKadaluarsa) sheet.getRange(existingRow, 4).setValue(tanggalKadaluarsa);
-        if (emailTujuan) sheet.getRange(existingRow, 5).setValue(emailTujuan);
-        if (noWATujuan) sheet.getRange(existingRow, 6).setValue(noWATujuan);
-        sheet.getRange(existingRow, 7).setValue(statusNotifikasi);
-
-        return responseJSON({
-          status: "success",
-          message: "Data SK " + noSK + " diperbarui di baris yang ada di Google Sheets."
+        return executeUpdateSK(sheet, {
+          namaIdentitas, jenisDokumen, noSK, tanggalBuat, durasiBerlaku, tanggalKadaluarsa, emailTujuan, noWATujuan, statusNotifikasi
         });
       } else {
         sheet.appendRow([
+          namaIdentitas,
+          jenisDokumen,
           noSK,
           tanggalBuat,
           durasiBerlaku,
@@ -236,12 +261,11 @@ function doPost(e) {
 
         return responseJSON({
           status: "success",
-          message: "Data SK " + noSK + " berhasil ditambahkan ke Google Sheets!"
+          message: "Data Dokumen " + noSK + " berhasil disimpan ke Google Sheets!"
         });
       }
     }
 
-    // Jika action tidak dikenal, jangan buat baris baru!
     return responseJSON({ status: "ignored", message: "Action tidak dikenal: " + action });
 
   } catch (error) {
@@ -249,7 +273,7 @@ function doPost(e) {
   }
 }
 
-/** Helper: Hapus Baris SK di Google Sheets */
+/** Helper: HAPUS (DELETE) Baris SK di Google Sheets */
 function executeDeleteSK(sheet, targetNoSK) {
   if (!targetNoSK) {
     return responseJSON({ status: "error", message: "No SK untuk dihapus kosong." });
@@ -260,8 +284,8 @@ function executeDeleteSK(sheet, targetNoSK) {
   let deleted = false;
 
   for (let i = data.length - 1; i >= 1; i--) {
-    const rowNoSK = data[i][0];
-    if (rowNoSK && normalizeSK(rowNoSK) === normTarget) {
+    const colNoSK = data[0][0] === "Nama Identitas" ? data[i][2] : data[i][0];
+    if (colNoSK && normalizeSK(colNoSK) === normTarget) {
       sheet.deleteRow(i + 1);
       deleted = true;
       break;
@@ -271,12 +295,12 @@ function executeDeleteSK(sheet, targetNoSK) {
   return responseJSON({
     status: deleted ? "success" : "not_found",
     message: deleted 
-      ? "SK " + targetNoSK + " berhasil dihapus dari Google Sheets!" 
-      : "SK " + targetNoSK + " tidak ditemukan di Google Sheets."
+      ? "Dokumen SK " + targetNoSK + " berhasil dihapus dari Google Sheets!" 
+      : "Dokumen SK " + targetNoSK + " tidak ditemukan di Google Sheets."
   });
 }
 
-/** Helper: Update Baris SK di Google Sheets */
+/** Helper: UPDATE (EDIT) Baris SK di Google Sheets */
 function executeUpdateSK(sheet, payload) {
   const targetNoSK = payload.noSK || "";
   if (!targetNoSK) {
@@ -288,14 +312,29 @@ function executeUpdateSK(sheet, payload) {
   let updated = false;
 
   for (let i = 1; i < data.length; i++) {
-    const rowNoSK = data[i][0];
-    if (rowNoSK && normalizeSK(rowNoSK) === normTarget) {
-      if (payload.tanggalBuat) sheet.getRange(i + 1, 2).setValue(payload.tanggalBuat);
-      if (payload.durasiBerlaku) sheet.getRange(i + 1, 3).setValue(payload.durasiBerlaku);
-      if (payload.tanggalKadaluarsa) sheet.getRange(i + 1, 4).setValue(payload.tanggalKadaluarsa);
-      if (payload.emailTujuan) sheet.getRange(i + 1, 5).setValue(payload.emailTujuan);
-      if (payload.noWATujuan) sheet.getRange(i + 1, 6).setValue(payload.noWATujuan);
-      if (payload.statusNotifikasi) sheet.getRange(i + 1, 7).setValue(payload.statusNotifikasi);
+    const colNoSK = data[0][0] === "Nama Identitas" ? data[i][2] : data[i][0];
+    if (colNoSK && normalizeSK(colNoSK) === normTarget) {
+      const is9Col = data[0][0] === "Nama Identitas";
+      
+      if (is9Col) {
+        if (payload.namaIdentitas) sheet.getRange(i + 1, 1).setValue(payload.namaIdentitas);
+        if (payload.jenisDokumen) sheet.getRange(i + 1, 2).setValue(payload.jenisDokumen);
+        if (payload.noSK) sheet.getRange(i + 1, 3).setValue(payload.noSK);
+        if (payload.tanggalBuat) sheet.getRange(i + 1, 4).setValue(payload.tanggalBuat);
+        if (payload.durasiBerlaku) sheet.getRange(i + 1, 5).setValue(payload.durasiBerlaku);
+        if (payload.tanggalKadaluarsa) sheet.getRange(i + 1, 6).setValue(payload.tanggalKadaluarsa);
+        if (payload.emailTujuan) sheet.getRange(i + 1, 7).setValue(payload.emailTujuan);
+        if (payload.noWATujuan) sheet.getRange(i + 1, 8).setValue(payload.noWATujuan);
+        if (payload.statusNotifikasi) sheet.getRange(i + 1, 9).setValue(payload.statusNotifikasi);
+      } else {
+        if (payload.noSK) sheet.getRange(i + 1, 1).setValue(payload.noSK);
+        if (payload.tanggalBuat) sheet.getRange(i + 1, 2).setValue(payload.tanggalBuat);
+        if (payload.durasiBerlaku) sheet.getRange(i + 1, 3).setValue(payload.durasiBerlaku);
+        if (payload.tanggalKadaluarsa) sheet.getRange(i + 1, 4).setValue(payload.tanggalKadaluarsa);
+        if (payload.emailTujuan) sheet.getRange(i + 1, 5).setValue(payload.emailTujuan);
+        if (payload.noWATujuan) sheet.getRange(i + 1, 6).setValue(payload.noWATujuan);
+        if (payload.statusNotifikasi) sheet.getRange(i + 1, 7).setValue(payload.statusNotifikasi);
+      }
       updated = true;
       break;
     }
@@ -304,8 +343,8 @@ function executeUpdateSK(sheet, payload) {
   return responseJSON({
     status: updated ? "success" : "not_found",
     message: updated 
-      ? "SK " + targetNoSK + " berhasil diperbarui di Google Sheets!" 
-      : "SK " + targetNoSK + " tidak ditemukan di Google Sheets."
+      ? "Dokumen SK " + targetNoSK + " berhasil diperbarui di Google Sheets!" 
+      : "Dokumen SK " + targetNoSK + " tidak ditemukan di Google Sheets."
   });
 }
 
@@ -383,23 +422,25 @@ function checkAndSendNotifications() {
 /**
  * 4. HELPER: KIRIM EMAIL NOTIFIKASI
  */
-function sendEmailNotification(toEmail, noSK, tanggalBuat, durasi, tglKadaluarsa) {
-  const subject = "[PENGINGAT] SK No " + noSK + " Akan Kadaluarsa dalam 7 Hari!";
+function sendEmailNotification(toEmail, namaIdentitas, jenisDokumen, noSK, tanggalBuat, durasi, tglKadaluarsa) {
+  const subject = "[PENGINGAT KADALUARSA] " + (jenisDokumen || "SK") + " No " + noSK + " - " + (namaIdentitas || "");
   
   const htmlBody = '<div style="font-family: Arial, sans-serif; padding: 20px; background-color: #f8fafc; border-radius: 10px;">' +
-    '<h2 style="color: #1e3a8a;">Pemberitahuan Kadaluarsa Surat Keputusan (SK)</h2>' +
-    '<p>Halo, ini adalah pengingat otomatis dari <b>Sistem Manajemen SK</b>.</p>' +
+    '<h2 style="color: #1e3a8a;">Pemberitahuan Kadaluarsa Dokumen / SK</h2>' +
+    '<p>Halo, ini adalah pengingat otomatis dari <b>Sistem Monitoring SK & Kepegawaian</b>.</p>' +
     '<div style="background-color: #ffffff; padding: 15px; border-left: 4px solid #f59e0b; border-radius: 6px; margin: 15px 0;">' +
-      '<table style="width: 100%; font-size: 14px;">' +
-        '<tr><td><b>Nomor SK:</b></td><td>' + noSK + '</td></tr>' +
-        '<tr><td><b>Tanggal Buat:</b></td><td>' + tanggalBuat + '</td></tr>' +
-        '<tr><td><b>Masa Berlaku:</b></td><td>' + durasi + '</td></tr>' +
-        '<tr><td><b>Tanggal Kadaluarsa:</b></td><td><span style="color: #dc2626; font-weight: bold;">' + tglKadaluarsa + ' (7 Hari Lagi)</span></td></tr>' +
+      '<table style="width: 100%; font-size: 14px; border-collapse: collapse;">' +
+        '<tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 6px 0;"><b>Nama Identitas:</b></td><td>' + (namaIdentitas || "-") + '</td></tr>' +
+        '<tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 6px 0;"><b>Jenis Dokumen:</b></td><td>' + (jenisDokumen || "-") + '</td></tr>' +
+        '<tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 6px 0;"><b>Nomor SK:</b></td><td>' + noSK + '</td></tr>' +
+        '<tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 6px 0;"><b>Tanggal Buat / TMT:</b></td><td>' + tanggalBuat + '</td></tr>' +
+        '<tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 6px 0;"><b>Masa Berlaku:</b></td><td>' + durasi + '</td></tr>' +
+        '<tr><td style="padding: 6px 0;"><b>Tanggal Kadaluarsa:</b></td><td><span style="color: #dc2626; font-weight: bold;">' + tglKadaluarsa + '</span></td></tr>' +
       '</table>' +
     '</div>' +
-    '<p>Mohon segera lakukan perpanjangan atau pembaruan SK terkait sebelum tanggal kadaluarsa tiba.</p>' +
+    '<p>Mohon segera lakukan proses perpanjangan atau pembaruan berkas terkait.</p>' +
     '<hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;" />' +
-    '<p style="font-size: 11px; color: #64748b;">Email ini dikirim otomatis oleh Sistem Serverless Dashboard SK.</p>' +
+    '<p style="font-size: 11px; color: #64748b;">Email ini dikirim otomatis oleh Sistem Serverless Monitoring SK.</p>' +
   '</div>';
   
   try {
@@ -418,14 +459,16 @@ function sendEmailNotification(toEmail, noSK, tanggalBuat, durasi, tglKadaluarsa
 /**
  * 5. HELPER: KIRIM WHATSAPP NOTIFIKASI (Fonnte API Kerangka)
  */
-function sendWhatsAppNotification(noWA, noSK, tanggalBuat, durasi, tglKadaluarsa) {
-  const message = "⚠️ *PENGINGAT KADALUARSA SK* ⚠️\n\n" +
-    "Nomor SK: *" + noSK + "*\n" +
-    "Tanggal Buat: " + tanggalBuat + "\n" +
-    "Masa Berlaku: " + durasi + "\n" +
-    "Tanggal Kadaluarsa: *" + tglKadaluarsa + " (7 Hari Lagi)*\n\n" +
+function sendWhatsAppNotification(noWA, namaIdentitas, jenisDokumen, noSK, tanggalBuat, durasi, tglKadaluarsa) {
+  const message = "⚠️ *PENGINGAT KADALUARSA DOKUMEN* ⚠️\n\n" +
+    "👤 Nama: *" + (namaIdentitas || "-") + "*\n" +
+    "📁 Jenis Dokumen: *" + (jenisDokumen || "SK") + "*\n" +
+    "📄 Nomor SK: *" + noSK + "*\n" +
+    "📅 Tanggal Buat: " + tanggalBuat + "\n" +
+    "⏳ Masa Berlaku: " + durasi + "\n" +
+    "🚨 Tanggal Kadaluarsa: *" + tglKadaluarsa + "*\n\n" +
     "Mohon segera diproses perpanjangannya.\n" +
-    "_Sistem Manajemen SK_";
+    "_Sistem Monitoring SK & Dokumen_";
   
   // Format nomor HP ke 628xxx
   let cleanWA = String(noWA).replace(/[^0-9]/g, '');
@@ -435,8 +478,8 @@ function sendWhatsAppNotification(noWA, noSK, tanggalBuat, durasi, tglKadaluarsa
     cleanWA = '62' + cleanWA;
   }
   
-  if (FONNTE_API_TOKEN === "GANTI_DENGAN_TOKEN_FONNTE_ANDA" || !FONNTE_API_TOKEN) {
-    Logger.log("[WA SIMULASI] Token Fonnte belum diganti. Pesan WA siap dikirim ke " + cleanWA + ": " + message);
+  if (FONNTE_API_TOKEN === "hknvP2hZXsbcnmpNgiBn" || FONNTE_API_TOKEN === "GANTI_DENGAN_TOKEN_FONNTE_ANDA" || !FONNTE_API_TOKEN) {
+    Logger.log("[WA SIMULASI] Pesan WA siap dikirim ke " + cleanWA + ": " + message);
     return;
   }
   
@@ -462,54 +505,6 @@ function sendWhatsAppNotification(noWA, noSK, tanggalBuat, durasi, tglKadaluarsa
   } catch (err) {
     Logger.log("Gagal kirim WA via Fonnte: " + err.toString());
   }
-}
-
-/**
- * 6. HELPER: GET OR CREATE SHEET WITH HEADERS
- */
-function getOrCreateSheet() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  let sheet = ss.getSheetByName(SHEET_NAME);
-  
-  if (!sheet) {
-    sheet = ss.insertSheet(SHEET_NAME);
-    // Masukkan Header Kolom
-    sheet.appendRow([
-      "No SK",
-      "Tanggal Buat",
-      "Durasi Berlaku",
-      "Tanggal Kadaluarsa",
-      "Email Tujuan",
-      "No WA Tujuan",
-      "Status Notifikasi"
-    ]);
-    sheet.getRange("A1:G1").setFontWeight("bold").setBackground("#e2e8f0");
-  }
-  
-  return sheet;
-}
-
-/**
- * 7. HELPER: FORMAT DATE YYYY-MM-DD
- */
-function formatDate(dateVal) {
-  if (!dateVal) return "";
-  if (dateVal instanceof Date) {
-    const year = dateVal.getFullYear();
-    const month = String(dateVal.getMonth() + 1).padStart(2, '0');
-    const day = String(dateVal.getDate()).padStart(2, '0');
-    return year + "-" + month + "-" + day;
-  }
-  return String(dateVal);
-}
-
-/**
- * 8. HELPER: RESPONSE JSON WITH CORS HEADERS
- */
-function responseJSON(data) {
-  return ContentService
-    .createTextOutput(JSON.stringify(data))
-    .setMimeType(ContentService.MimeType.JSON);
 }
 `;
 
